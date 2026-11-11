@@ -275,8 +275,7 @@ export class EnsembleAudioEngine {
     for (const track of this.scoreData.tracks) {
       const nodeInfo = this.trackAudioMap.get(track.id);
       if (nodeInfo) {
-        nodeInfo.nextNoteIdx = track.notes.findIndex((n) => n.startBeat >= startBeat - 0.01);
-        if (nodeInfo.nextNoteIdx === -1) nodeInfo.nextNoteIdx = track.notes.length;
+        nodeInfo.nextNoteIdx = this._binarySearchNoteIdx(track.notes, startBeat - 0.01);
       }
     }
 
@@ -285,6 +284,20 @@ export class EnsembleAudioEngine {
     this.schedulerTimer = setInterval(() => this._schedulerTick(), 25);
     this._schedulerTick();
     this._startRafLoop();
+  }
+
+  _binarySearchNoteIdx(notes, targetBeat) {
+    let lo = 0;
+    let hi = notes.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (notes[mid].startBeat < targetBeat) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
   }
 
   pause() {
@@ -337,13 +350,28 @@ export class EnsembleAudioEngine {
 
   _stopAllActiveVoices() {
     for (const nodeInfo of this.trackAudioMap.values()) {
-      for (const stopFn of nodeInfo.activeStops) {
+      for (const voice of nodeInfo.activeStops) {
         try {
-          stopFn();
+          if (typeof voice === 'function') voice();
+          else if (voice && voice.stopFn) voice.stopFn();
         } catch (_) {}
       }
       nodeInfo.activeStops.clear();
     }
+  }
+
+  _pruneExpiredVoices(now) {
+    let totalActive = 0;
+    for (const nodeInfo of this.trackAudioMap.values()) {
+      for (const voice of nodeInfo.activeStops) {
+        if (voice.endAudioTime <= now) {
+          nodeInfo.activeStops.delete(voice);
+        } else {
+          totalActive++;
+        }
+      }
+    }
+    return totalActive;
   }
 
   _schedulerTick() {
@@ -354,6 +382,10 @@ export class EnsembleAudioEngine {
     const currentPlaybackSec = this.offsetSeconds + elapsed;
     const lookAheadSec = currentPlaybackSec + 0.15;
     const totalSec = this.getTotalSeconds();
+    const rate = this.rateMultiplier;
+
+    let activeVoiceCount = this._pruneExpiredVoices(now);
+    const MAX_POLYPHONY = 52;
 
     const anySolo = this.scoreData.tracks.some((t) => t.solo);
 
@@ -365,7 +397,10 @@ export class EnsembleAudioEngine {
 
       while (nodeInfo.nextNoteIdx < track.notes.length) {
         const note = track.notes[nodeInfo.nextNoteIdx];
-        const noteStartSec = beatToSeconds(note.startBeat, this.scoreData.tempoMap, this.rateMultiplier);
+        const noteStartSec =
+          note._sec1x !== undefined
+            ? note._sec1x / rate
+            : beatToSeconds(note.startBeat, this.scoreData.tempoMap, rate);
 
         if (noteStartSec > lookAheadSec) break;
 
@@ -374,12 +409,18 @@ export class EnsembleAudioEngine {
           continue;
         }
 
-        const noteEndSec = beatToSeconds(
-          note.startBeat + note.durationBeats,
-          this.scoreData.tempoMap,
-          this.rateMultiplier
-        );
-        const durSec = Math.max(0.06, noteEndSec - noteStartSec);
+        if (activeVoiceCount >= MAX_POLYPHONY) {
+          continue;
+        }
+
+        const durSec =
+          note._durSec1x !== undefined
+            ? Math.max(0.05, note._durSec1x / rate)
+            : Math.max(
+                0.06,
+                beatToSeconds(note.startBeat + note.durationBeats, this.scoreData.tempoMap, rate) -
+                  noteStartSec
+              );
         const humanizeSec = (track.humanizeMs || 0) / 1000;
         const scheduleAudioTime =
           this.playStartCtxTime + (noteStartSec - this.offsetSeconds) + humanizeSec;
@@ -392,6 +433,7 @@ export class EnsembleAudioEngine {
             Math.max(now, scheduleAudioTime),
             durSec
           );
+          activeVoiceCount++;
         }
       }
     }
@@ -406,11 +448,9 @@ export class EnsembleAudioEngine {
     const inst = INSTRUMENTS[track.instrumentKey] || INSTRUMENTS.acoustic_grand_piano;
     const cached = this.soundfontCache.get(inst.sfName);
 
-    // Route Percussion always through crisp drum synth OR soundfont if melodic
     if (inst.isPercussion || note.isPercussion) {
       const stopFn = this._playDrumSynth(note.midi, audioTime, nodeInfo.gainNode);
-      nodeInfo.activeStops.add(stopFn);
-      setTimeout(() => nodeInfo.activeStops.delete(stopFn), 500);
+      nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + 0.35 });
       return;
     }
 
@@ -423,8 +463,7 @@ export class EnsembleAudioEngine {
       });
       if (stopNode && typeof stopNode.stop === 'function') {
         const stopFn = () => stopNode.stop(this.ctx.currentTime);
-        nodeInfo.activeStops.add(stopFn);
-        setTimeout(() => nodeInfo.activeStops.delete(stopFn), (durationSec + 0.4) * 1000);
+        nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + durationSec + 0.35 });
       }
     } else {
       const stopFn = this._playFallbackSynth(
@@ -435,8 +474,7 @@ export class EnsembleAudioEngine {
         nodeInfo.gainNode,
         track.detuneCents || 0
       );
-      nodeInfo.activeStops.add(stopFn);
-      setTimeout(() => nodeInfo.activeStops.delete(stopFn), (durationSec + 0.4) * 1000);
+      nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + durationSec + 0.35 });
     }
   }
 

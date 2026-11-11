@@ -363,15 +363,25 @@ export class LiveStageVisualizer {
 
       this.nodeRefs.set(track.id, {
         rootEl: musicianEl,
-        energyEl: musicianEl.querySelector('.energy-fill')
+        energyEl: musicianEl.querySelector('.energy-fill'),
+        lastPct: -1,
+        lastAudible: null,
+        lastSolo: null
       });
     });
 
-    this.updateFrame(0, false);
+    this._lastUpdateMs = 0;
+    this.updateFrame(0, false, true);
   }
 
-  updateFrame(currentBeat, isPlaying) {
+  updateFrame(currentBeat, isPlaying, force = false) {
     if (!this.project) return;
+    const nowMs = performance.now();
+    if (!force && isPlaying && nowMs - (this._lastUpdateMs || 0) < 42) {
+      return; // ~24fps smooth stage lighting without DOM layout churn
+    }
+    this._lastUpdateMs = nowMs;
+
     const tracks = this.project.tracks || [];
     const anySolo = tracks.some((t) => t.solo);
 
@@ -380,25 +390,40 @@ export class LiveStageVisualizer {
       if (!refs) continue;
 
       const isAudible = anySolo ? track.solo : !track.muted;
-      refs.rootEl.classList.toggle('muted-slot', !isAudible);
-      refs.rootEl.classList.toggle('solo-slot', Boolean(track.solo));
+      const isSolo = Boolean(track.solo);
+
+      if (refs.lastAudible !== isAudible) {
+        refs.rootEl.classList.toggle('muted-slot', !isAudible);
+        refs.lastAudible = isAudible;
+      }
+      if (refs.lastSolo !== isSolo) {
+        refs.rootEl.classList.toggle('solo-slot', isSolo);
+        refs.lastSolo = isSolo;
+      }
 
       if (!isPlaying || !isAudible) {
-        refs.rootEl.classList.remove('playing-glow');
-        refs.rootEl.style.setProperty('--glow-intensity', '0');
-        refs.energyEl.style.width = '0%';
+        if (refs.lastPct !== 0) {
+          refs.rootEl.classList.remove('playing-glow');
+          refs.rootEl.style.setProperty('--glow-intensity', '0');
+          refs.energyEl.style.width = '0%';
+          refs.lastPct = 0;
+        }
         continue;
       }
 
       const intensity = getTrackActivityAtBeat(track, currentBeat);
-      if (intensity > 0.05) {
-        refs.rootEl.classList.add('playing-glow');
-        refs.rootEl.style.setProperty('--glow-intensity', intensity.toFixed(2));
-        refs.energyEl.style.width = `${Math.round(intensity * 100)}%`;
-      } else {
-        refs.rootEl.classList.remove('playing-glow');
-        refs.rootEl.style.setProperty('--glow-intensity', '0');
-        refs.energyEl.style.width = '0%';
+      const pct = intensity > 0.05 ? Math.round(intensity * 20) * 5 : 0; // quantize to 5% steps
+      if (pct !== refs.lastPct) {
+        refs.lastPct = pct;
+        if (pct > 0) {
+          refs.rootEl.classList.add('playing-glow');
+          refs.rootEl.style.setProperty('--glow-intensity', (pct / 100).toFixed(2));
+          refs.energyEl.style.width = `${pct}%`;
+        } else {
+          refs.rootEl.classList.remove('playing-glow');
+          refs.rootEl.style.setProperty('--glow-intensity', '0');
+          refs.energyEl.style.width = '0%';
+        }
       }
     }
   }

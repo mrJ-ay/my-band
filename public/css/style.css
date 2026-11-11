@@ -1654,6 +1654,22 @@ body:not(.mode-studio) .studio-only {
 /* ==========================================================================
    LIVE CONCERT STAGE VISUALIZER (Theme & Glowing Active Instruments)
    ========================================================================== */
+.score-page-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  padding-left: 10px;
+  border-left: 1px solid var(--border);
+}
+
+.page-range-label {
+  font-size: 11.5px;
+  color: var(--gold-bright);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .stage-toggle-btn {
   background: var(--bg-elevated);
   border: 1px solid var(--border-strong);

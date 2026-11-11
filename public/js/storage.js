@@ -12,10 +12,36 @@ export function listRecentProjects() {
   }
 }
 
-export function saveProject(project) {
+export async function decompressProjectXml(record) {
+  if (record.xmlString) return record.xmlString;
+  if (record.xmlZipBase64 && window.JSZip) {
+    const zip = await window.JSZip.loadAsync(record.xmlZipBase64, { base64: true });
+    const file = zip.file('score.xml');
+    if (file) return await file.async('string');
+  }
+  return '';
+}
+
+export async function saveProject(project) {
   try {
     const list = listRecentProjects();
     const id = project.id || `proj_${Date.now()}`;
+
+    let xmlString = project.xmlString;
+    let xmlZipBase64 = null;
+
+    // Compress large classical MusicXML scores (~20-30x smaller via DEFLATE)
+    if (xmlString && xmlString.length > 60000 && window.JSZip) {
+      const zip = new window.JSZip();
+      zip.file('score.xml', xmlString);
+      xmlZipBase64 = await zip.generateAsync({
+        type: 'base64',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+      });
+      xmlString = null;
+    }
+
     const record = {
       id,
       title: project.title || '나만의 합주 프로젝트',
@@ -25,7 +51,8 @@ export function saveProject(project) {
       reverb: project.reverb ?? 0.28,
       rateMultiplier: project.rateMultiplier ?? 1.0,
       masterVolume: project.masterVolume ?? 0.85,
-      xmlString: project.xmlString,
+      xmlString,
+      xmlZipBase64,
       trackSettings: (project.tracks || []).map((t) => ({
         id: t.id,
         instrumentKey: t.instrumentKey,
@@ -39,7 +66,6 @@ export function saveProject(project) {
 
     const filtered = list.filter((p) => p.id !== id);
     filtered.unshift(record);
-    // Keep up to 10 recent projects to stay well within localStorage quota
     const trimmed = filtered.slice(0, 10);
     localStorage.setItem(PROJECTS_KEY, JSON.stringify(trimmed));
     return record;

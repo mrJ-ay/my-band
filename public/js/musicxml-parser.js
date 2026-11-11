@@ -218,7 +218,7 @@ function expandMeasureRepeats(measureNodes) {
       repeatStartIdx = i;
     }
 
-    order.push(m);
+    order.push({ node: m, rawIndex: i });
 
     if (hasBackward && !repeatedBackward.has(i)) {
       repeatedBackward.add(i);
@@ -267,11 +267,12 @@ export function parseMusicXML(xmlString, fallbackTitle = '합주 프로젝트') 
   });
 
   const tempoChanges = []; // { beat, bpm }
-  const measureTimeline = []; // { index, number, startBeat, endBeat, beats }
+  const measureTimeline = []; // { index, rawIndex, number, startBeat, endBeat, beats }
   const tracks = [];
   let maxEndBeat = 0;
 
   const partEls = Array.from(doc.querySelectorAll('score-partwise > part'));
+  let rawMeasureCount = 0;
 
   partEls.forEach((partEl, partIdx) => {
     const partId = partEl.getAttribute('id') || `P${partIdx + 1}`;
@@ -285,6 +286,7 @@ export function parseMusicXML(xmlString, fallbackTitle = '합주 프로젝트') 
     };
 
     const rawMeasures = Array.from(partEl.querySelectorAll(':scope > measure'));
+    if (partIdx === 0) rawMeasureCount = rawMeasures.length;
     const expandedMeasures = expandMeasureRepeats(rawMeasures);
 
     let divisions = 1;
@@ -299,7 +301,7 @@ export function parseMusicXML(xmlString, fallbackTitle = '합주 프로젝트') 
     let midiSum = 0;
     let midiCount = 0;
 
-    expandedMeasures.forEach((measureEl, mIdx) => {
+    expandedMeasures.forEach(({ node: measureEl, rawIndex }, mIdx) => {
       const mNum = measureEl.getAttribute('number') || String(mIdx + 1);
       let cursorBeats = 0;
       let lastNoteStartBeats = 0;
@@ -452,6 +454,7 @@ export function parseMusicXML(xmlString, fallbackTitle = '합주 프로젝트') 
       if (partIdx === 0) {
         measureTimeline.push({
           index: mIdx,
+          rawIndex,
           number: mNum,
           startBeat: measureStartBeat,
           endBeat: measureStartBeat + actualMeasureLen,
@@ -487,9 +490,18 @@ export function parseMusicXML(xmlString, fallbackTitle = '합주 프로젝트') 
     });
   });
 
-  // Deduplicate & sort tempo changes
+  // Deduplicate & sort tempo changes, and precompute O(1) note seconds at 1.0x
   const tempoMap = buildTempoMap(tempoChanges);
   const baseBpm = tempoMap[0].bpm;
+
+  for (const track of tracks) {
+    for (const note of track.notes) {
+      const startSec = beatToSeconds(note.startBeat, tempoMap, 1.0);
+      const endSec = beatToSeconds(note.startBeat + note.durationBeats, tempoMap, 1.0);
+      note._sec1x = startSec;
+      note._durSec1x = Math.max(0.05, endSec - startSec);
+    }
+  }
 
   return {
     title,
@@ -498,6 +510,7 @@ export function parseMusicXML(xmlString, fallbackTitle = '합주 프로젝트') 
     tempoMap,
     baseBpm,
     totalBeats: maxEndBeat,
+    rawMeasureCount,
     measureTimeline,
     recognitionSummary: buildRecognitionSummary(tracks)
   };

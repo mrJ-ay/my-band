@@ -16,7 +16,8 @@ import { SAMPLE_SCORES } from './samples.js';
 import {
   listRecentProjects,
   saveProject,
-  deleteProject
+  deleteProject,
+  decompressProjectXml
 } from './storage.js';
 import {
   startOneIdLogin,
@@ -48,6 +49,15 @@ const state = {
 
 const audioEngine = new EnsembleAudioEngine();
 const osmdView = new ScoreDisplayView(document.getElementById('osmdContainer'));
+osmdView.onPageChange = ({ pagingEnabled, pageIndex, totalPages, startMeasure, endMeasure }) => {
+  const ctrl = document.getElementById('scorePageControls');
+  const lbl = document.getElementById('pageRangeLabel');
+  if (!ctrl || !lbl) return;
+  ctrl.classList.toggle('hidden', !pagingEnabled);
+  if (pagingEnabled) {
+    lbl.textContent = `${startMeasure}~${endMeasure}마디 (${pageIndex + 1}/${totalPages})`;
+  }
+};
 const liveStage = new LiveStageVisualizer(
   document.getElementById('liveStagePanel'),
   (trackId) => {
@@ -485,7 +495,7 @@ async function openScoreInStudio(scoreData, { autoPlay = false, presetOverride =
   updateSoundfontBadge();
 
   try {
-    await osmdView.loadXML(scoreData.xmlString);
+    await osmdView.loadXML(scoreData.xmlString, scoreData.measureTimeline);
     document.getElementById('measureIndicator').textContent = `마디 1 / ${scoreData.measureTimeline.length}`;
   } catch (err) {
     console.error('OSMD render error:', err);
@@ -517,7 +527,8 @@ async function loadSampleIntoStudio(sampleId) {
 }
 
 async function resumeSavedProject(saved) {
-  const parsed = parseMusicXML(saved.xmlString, saved.title);
+  const xmlStr = await decompressProjectXml(saved);
+  const parsed = parseMusicXML(xmlStr, saved.title);
   parsed.id = saved.id;
   parsed.ensembleId = saved.ensembleId;
   parsed.ensembleLabel = saved.ensembleLabel;
@@ -776,31 +787,68 @@ audioEngine.onTrackLoadUpdate = () => {
 };
 
 let isSeeking = false;
+let lastUiSecStr = '';
+let lastUiDurStr = '';
+let lastUiMeasureStr = '';
+let lastUiSeekVal = -1;
+let lastOsmdSyncMs = 0;
+
+function findMeasureIndexBinary(timeline, beat) {
+  if (!timeline || timeline.length === 0) return 0;
+  let lo = 0;
+  let hi = timeline.length - 1;
+  let ans = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (timeline[mid].startBeat <= beat + 0.05) {
+      ans = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return ans;
+}
 
 audioEngine.onProgress = ({ currentSeconds, totalSeconds, currentBeat, isPlaying }) => {
   if (!state.activeProject) return;
-  document.getElementById('timeElapsed').textContent = formatTime(currentSeconds);
-  document.getElementById('timeDuration').textContent = formatTime(totalSeconds);
+
+  const secStr = formatTime(currentSeconds);
+  if (secStr !== lastUiSecStr) {
+    lastUiSecStr = secStr;
+    document.getElementById('timeElapsed').textContent = secStr;
+  }
+
+  const durStr = formatTime(totalSeconds);
+  if (durStr !== lastUiDurStr) {
+    lastUiDurStr = durStr;
+    document.getElementById('timeDuration').textContent = durStr;
+  }
 
   if (!isSeeking && totalSeconds > 0) {
-    const ratio = Math.min(1, Math.max(0, currentSeconds / totalSeconds));
-    document.getElementById('seekSlider').value = Math.round(ratio * 1000);
-  }
-
-  // Update current measure text
-  const timeline = state.activeProject.measureTimeline || [];
-  let curMeasure = 1;
-  for (const m of timeline) {
-    if (currentBeat >= m.startBeat - 0.05) {
-      curMeasure = m.index + 1;
+    const seekVal = Math.round(Math.min(1, Math.max(0, currentSeconds / totalSeconds)) * 1000);
+    if (seekVal !== lastUiSeekVal) {
+      lastUiSeekVal = seekVal;
+      document.getElementById('seekSlider').value = seekVal;
     }
   }
-  document.getElementById('measureIndicator').textContent = `마디 ${curMeasure} / ${timeline.length || '-'}`;
+
+  const timeline = state.activeProject.measureTimeline || [];
+  const curMeasure = timeline.length > 0 ? findMeasureIndexBinary(timeline, currentBeat) + 1 : 1;
+  const measureStr = `마디 ${curMeasure} / ${timeline.length || '-'}`;
+  if (measureStr !== lastUiMeasureStr) {
+    lastUiMeasureStr = measureStr;
+    document.getElementById('measureIndicator').textContent = measureStr;
+  }
 
   liveStage.updateFrame(currentBeat, isPlaying);
 
   if (isPlaying || currentBeat > 0) {
-    osmdView.syncCursorToBeat(currentBeat);
+    const nowMs = performance.now();
+    if (!isPlaying || nowMs - lastOsmdSyncMs >= 75) {
+      lastOsmdSyncMs = nowMs;
+      osmdView.syncCursorToBeat(currentBeat, timeline);
+    }
   }
 };
 
@@ -916,16 +964,18 @@ function bindEvents() {
     }
   });
 
-  document.getElementById('studioSaveBtn').addEventListener('click', () => {
+  document.getElementById('studioSaveBtn').addEventListener('click', async () => {
     if (!state.activeProject) return;
     state.activeProject.title =
       document.getElementById('studioProjectTitle').value.trim() || state.activeProject.title;
     state.activeProject.reverb = audioEngine.reverbAmount;
     state.activeProject.masterVolume = audioEngine.masterVolume;
-    const saved = saveProject(state.activeProject);
+    const saved = await saveProject(state.activeProject);
     if (saved) {
       state.activeProject.id = saved.id;
       showToast(`'${saved.title}' 프로젝트를 저장했습니다.`);
+    } else {
+      showToast('브라우저 저장 공간 한도로 인해 일부 프로젝트 저장에 실패했습니다.');
     }
   });
 
@@ -948,11 +998,19 @@ function bindEvents() {
     e.currentTarget.textContent = isCollapsed ? '🎭 무대 열기' : '🎭 무대 보기';
   });
 
+  document.getElementById('pagePrevBtn').addEventListener('click', () => {
+    osmdView.setPage(osmdView.currentPageIndex - 1);
+  });
+
+  document.getElementById('pageNextBtn').addEventListener('click', () => {
+    osmdView.setPage(osmdView.currentPageIndex + 1);
+  });
+
   document.getElementById('scorePartFilterSelect').addEventListener('change', (e) => {
     const idx = parseInt(e.target.value, 10);
     osmdView.setVisiblePartIndex(idx);
-    if (audioEngine.getCurrentBeat() > 0) {
-      osmdView.syncCursorToBeat(audioEngine.getCurrentBeat());
+    if (audioEngine.getCurrentBeat() > 0 && state.activeProject) {
+      osmdView.syncCursorToBeat(audioEngine.getCurrentBeat(), state.activeProject.measureTimeline);
     }
   });
 
@@ -1014,7 +1072,7 @@ function bindEvents() {
     if (audioEngine.isPlaying) {
       audioEngine.pause();
       updatePlayButtonState(false);
-      liveStage.updateFrame(audioEngine.getCurrentBeat(), false);
+      liveStage.updateFrame(audioEngine.getCurrentBeat(), false, true);
     } else {
       audioEngine.play();
       updatePlayButtonState(true);
@@ -1026,7 +1084,7 @@ function bindEvents() {
     audioEngine.stop();
     osmdView.resetCursor();
     updatePlayButtonState(false);
-    liveStage.updateFrame(0, false);
+    liveStage.updateFrame(0, false, true);
   });
 
   const seekSlider = document.getElementById('seekSlider');
@@ -1038,7 +1096,8 @@ function bindEvents() {
     const ratio = parseInt(seekSlider.value, 10) / 1000;
     const targetSec = audioEngine.getTotalSeconds() * ratio;
     audioEngine.seekToSeconds(targetSec);
-    osmdView.syncCursorToBeat(audioEngine.getCurrentBeat());
+    osmdView.syncCursorToBeat(audioEngine.getCurrentBeat(), state.activeProject.measureTimeline);
+    liveStage.updateFrame(audioEngine.getCurrentBeat(), audioEngine.isPlaying, true);
   });
 }
 
