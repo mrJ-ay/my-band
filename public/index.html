@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0e13" />
+    <title>MY BAND · 나만의 가상 합주단 &amp; 악보 자동 연주 스튜디오</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+    <!-- Bundled Vendor Libraries (JSZip, OSMD, SoundFont Player) -->
+    <script src="vendor/jszip.min.js"></script>
+    <script src="vendor/opensheetmusicdisplay.min.js"></script>
+    <script src="vendor/soundfont-player.min.js"></script>
+  </head>
+  <body>
+    <!-- Top Global Header -->
+    <header class="top-header">
+      <div class="header-left">
+        <button type="button" class="brand-logo" id="logoHomeBtn">
+          <span class="brand-mark">🎼</span>
+          <span class="brand-texts">
+            <span class="brand-en">MY BAND</span>
+            <span class="brand-ko">가상 합주 스튜디오</span>
+          </span>
+        </button>
+
+        <nav class="main-nav" id="mainNav">
+          <button type="button" class="nav-pill active" data-screen="home">홈</button>
+          <button type="button" class="nav-pill" data-screen="ensembles">악단 선택</button>
+          <button type="button" class="nav-pill" data-screen="upload">악보 업로드</button>
+          <button type="button" class="nav-pill" data-screen="studio" id="navStudioBtn">합주 스튜디오</button>
+        </nav>
+      </div>
+
+      <div class="header-right">
+        <div class="selected-band-chip" id="headerBandChip" title="현재 선택된 악단">
+          <span class="chip-dot"></span>
+          <span id="headerBandLabel">선택된 악단: 원본 악보 유지</span>
+        </div>
+        <div class="util-links">
+          <a href="https://oneid-icvq.onrender.com" target="_blank" rel="noopener" class="util-btn">ONEID 로그인</a>
+          <a href="https://oneid-helpdesk.onrender.com/?service=MY%20BAND" target="_blank" rel="noopener" class="util-btn">고객센터</a>
+        </div>
+      </div>
+    </header>
+
+    <!-- ================================================================== -->
+    <!-- SCREEN 1: HOME                                                     -->
+    <!-- ================================================================== -->
+    <section id="screen-home" class="screen active">
+      <div class="home-container">
+        <div class="hero-card">
+          <div class="hero-copy">
+            <span class="hero-badge">MUSIC FOR EVERYONE · AI-FREE INSTANT ENSEMBLE</span>
+            <h1>음악을 몰라도,<br />나만의 악단을 지휘하세요.</h1>
+            <p class="hero-sub">
+              MusicXML 악보를 올리고 원하는 악단을 고르기만 하면, 악기를 자동으로 인식해
+              실제 악기 소리로 합주를 연주해 드립니다.
+            </p>
+            <div class="hero-actions">
+              <button type="button" class="btn-primary" id="homeNewBandBtn">🎺 새 악단 만들기</button>
+              <button type="button" class="btn-secondary" id="homeUploadBtn">📄 악보 업로드</button>
+              <button type="button" class="btn-ghost" id="homeBrowsePresetsBtn">프리셋 악단 둘러보기</button>
+            </div>
+            <div class="hero-flow-steps">
+              <span>1. 악단 선택</span>
+              <span class="arrow">→</span>
+              <span>2. 악보 업로드 (.musicxml / .mxl)</span>
+              <span class="arrow">→</span>
+              <span>3. 자동 악기 인식 &amp; 합주 감상</span>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="mini-stage-card">
+              <div class="stage-head">
+                <span class="stage-title">가상 합주 무대 미리보기</span>
+                <span class="stage-live">READY</span>
+              </div>
+              <div class="stage-grid">
+                <div class="stage-slot"><span>🎻</span><small>바이올린 ×2</small></div>
+                <div class="stage-slot"><span>🪈</span><small>플루트 ×1</small></div>
+                <div class="stage-slot"><span>🎺</span><small>트럼펫 ×2</small></div>
+                <div class="stage-slot"><span>🎷</span><small>색소폰 ×1</small></div>
+                <div class="stage-slot"><span>🎸</span><small>기타 · 베이스</small></div>
+                <div class="stage-slot"><span>🥁</span><small>드럼 · 팀파니</small></div>
+              </div>
+              <div class="stage-note">
+                간단 모드에서는 버튼 하나로 즉시 재생하고,<br />스튜디오 모드에서는 악기별 음색·음량을 세밀하게 조율합니다.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sample Scores Quick Launch -->
+        <div class="home-section">
+          <div class="section-header">
+            <div>
+              <h2>악보 파일이 없어도 바로 들어보세요</h2>
+              <p>내장된 다중 파트 샘플 악보로 1초 만에 오케스트라·브라스·록 밴드 합주를 체험할 수 있습니다.</p>
+            </div>
+          </div>
+          <div class="sample-cards-grid" id="homeSampleGrid">
+            <!-- Populated by app.js -->
+          </div>
+        </div>
+
+        <!-- Recent Projects -->
+        <div class="home-section">
+          <div class="section-header">
+            <div>
+              <h2>최근 작업한 악단</h2>
+              <p>브라우저에 저장된 내 합주 프로젝트를 이어서 감상하고 편곡하세요.</p>
+            </div>
+          </div>
+          <div class="recent-projects-grid" id="homeRecentGrid">
+            <!-- Populated by app.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- SCREEN 2: ENSEMBLES (프리셋 & 자유 구성)                             -->
+    <!-- ================================================================== -->
+    <section id="screen-ensembles" class="screen">
+      <div class="page-container">
+        <div class="page-head">
+          <div>
+            <span class="eyebrow">STEP 1 · ENSEMBLE BUILDER</span>
+            <h1>악단 선택 및 자유 구성</h1>
+            <p>원하는 연주 스타일의 프리셋 악단을 선택하거나, 악기를 하나씩 골라 나만의 자유 구성 악단을 만들어보세요.</p>
+          </div>
+          <div class="page-head-actions">
+            <button type="button" class="btn-primary" id="ensembleGoUploadBtn">선택 완료 → 악보 올리기</button>
+          </div>
+        </div>
+
+        <!-- Preset Ensembles -->
+        <div class="block-section">
+          <h2 class="block-title">A. 프리셋 악단 (8종)</h2>
+          <div class="preset-grid" id="presetEnsemblesGrid">
+            <!-- Populated by app.js -->
+          </div>
+        </div>
+
+        <!-- Custom Free Builder -->
+        <div class="block-section custom-builder-box">
+          <div class="custom-builder-head">
+            <div>
+              <h2 class="block-title">B. 자유 구성 악단 만들기</h2>
+              <p class="block-desc">동일한 악기를 여러 개 추가할 수 있으며, 합주 시 좌우 입체 음향과 음량 밸런스가 자동으로 맞춰집니다.</p>
+            </div>
+            <div class="custom-name-row">
+              <input type="text" id="customBandNameInput" class="text-input" placeholder="나만의 악단 이름 (예: 우리 동네 브라스)" value="나만의 자유 합주단" />
+              <button type="button" class="btn-secondary" id="applyCustomBandBtn">이 구성으로 선택하기</button>
+            </div>
+          </div>
+
+          <div class="custom-builder-layout">
+            <div class="instrument-picker">
+              <div class="picker-filter-bar" id="pickerCategoryTabs">
+                <!-- Category tabs -->
+              </div>
+              <div class="picker-grid" id="instrumentPickerGrid">
+                <!-- Instruments with +추가 & 🔊미리듣기 -->
+              </div>
+            </div>
+
+            <div class="custom-lineup-panel">
+              <div class="lineup-header">
+                <h3>현재 편성된 악기 (<span id="customLineupCount">0</span>)</h3>
+                <button type="button" class="btn-mini-danger" id="clearCustomLineupBtn">비우기</button>
+              </div>
+              <div class="lineup-list" id="customLineupList">
+                <!-- Selected instruments -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- SCREEN 3: UPLOAD SCORE                                             -->
+    <!-- ================================================================== -->
+    <section id="screen-upload" class="screen">
+      <div class="page-container upload-layout">
+        <div class="page-head">
+          <div>
+            <span class="eyebrow">STEP 2 · MUSICXML ANALYZER</span>
+            <h1>악보 업로드 &amp; 자동 악기 인식</h1>
+            <p>여러 파트가 담긴 통합 악보 1개 또는 악기별 개별 악보 여러 개를 한꺼번에 올려주세요.</p>
+          </div>
+        </div>
+
+        <div class="upload-columns">
+          <!-- Dropzone & File List -->
+          <div class="upload-left">
+            <div class="dropzone" id="scoreDropzone">
+              <input type="file" id="scoreFileInput" accept=".musicxml,.xml,.mxl" multiple hidden />
+              <div class="drop-icon">🎼</div>
+              <h3>악보 파일을 여기에 끌어다 놓으세요</h3>
+              <p>또는 아래 버튼을 눌러 파일을 선택하세요 (여러 파일 동시 선택 가능)</p>
+              <div class="drop-formats">지원 형식: <code>.musicxml</code> <code>.xml</code> <code>.mxl</code></div>
+              <button type="button" class="btn-primary" id="browseScoreBtn">파일 선택하기</button>
+            </div>
+
+            <div class="upload-modes-info">
+              <div class="info-card">
+                <strong>A. 통합 악보 업로드</strong>
+                <span>여러 악기가 함께 들어 있는 MusicXML 1개를 올리면 파트를 자동 분리합니다.</span>
+              </div>
+              <div class="info-card">
+                <strong>B. 개별 악보 동시 업로드</strong>
+                <span>플루트.xml, 바이올린.xml 등 여러 파일을 한 번에 올리면 하나의 합주로 묶어줍니다.</span>
+              </div>
+            </div>
+
+            <div class="sample-quick-box">
+              <h4>내장 샘플 악보 바로 불러오기</h4>
+              <div class="sample-pill-row" id="uploadSamplePills">
+                <!-- Populated by app.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Recognition Result Preview -->
+          <div class="upload-right">
+            <div class="analysis-panel" id="analysisPanel">
+              <div class="analysis-empty" id="analysisEmptyState">
+                <div class="empty-icon">🔍</div>
+                <h3>악보를 올리면 자동으로 분석해 드려요</h3>
+                <p>파트별 음표·쉼표, 템포, 박자, 이조 악기 음정 보정까지 자동으로 계산해 합주를 준비합니다.</p>
+              </div>
+
+              <div class="analysis-result hidden" id="analysisResultState">
+                <div class="result-banner">
+                  <span class="result-check">✓ 분석 완료</span>
+                  <h2 id="recognitionHeadline">악기 4개를 찾았어요!</h2>
+                  <p id="recognitionMeta">제목 · 기본 템포 108 BPM · 총 8마디</p>
+                </div>
+
+                <div class="recognized-chips" id="recognizedInstrumentList">
+                  <!-- 예: 플루트 × 2, 클라리넷 × 2 -->
+                </div>
+
+                <div class="mapping-choice-box">
+                  <h4>연주할 악기 소리 배정 방식</h4>
+                  <label class="radio-card">
+                    <input type="radio" name="mappingMode" value="original" checked />
+                    <div>
+                      <strong>원본 악보의 악기 그대로 연주 (추천)</strong>
+                      <small>악보에서 인식된 본래 악기 음색으로 충실하게 합주합니다.</small>
+                    </div>
+                  </label>
+                  <label class="radio-card">
+                    <input type="radio" name="mappingMode" value="ensemble" />
+                    <div>
+                      <strong id="mappingEnsembleTitle">선택한 악단 스타일로 자동 변환</strong>
+                      <small>고른 악단의 음색과 공간감 구성에 맞춰 각 파트를 재편성합니다.</small>
+                    </div>
+                  </label>
+                </div>
+
+                <button type="button" class="btn-primary btn-full" id="enterStudioBtn">
+                  ▶ 합주 스튜디오에서 연주하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- SCREEN 4: ENSEMBLE STUDIO                                          -->
+    <!-- ================================================================== -->
+    <section id="screen-studio" class="screen studio-screen">
+      <!-- Studio Top Bar -->
+      <div class="studio-topbar">
+        <div class="studio-title-group">
+          <input type="text" id="studioProjectTitle" class="project-title-input" value="새 합주 프로젝트" aria-label="프로젝트 이름" />
+          <span class="studio-meta-badge" id="studioTempoBadge">108 BPM</span>
+          <span class="studio-meta-badge subtle" id="soundfontStatusBadge">음원 준비 중...</span>
+        </div>
+
+        <div class="studio-controls-group">
+          <div class="mode-switcher" role="group" aria-label="화면 모드 전환">
+            <button type="button" class="mode-btn active" data-mode="simple" id="modeSimpleBtn">간단 모드</button>
+            <button type="button" class="mode-btn" data-mode="studio" id="modeStudioBtn">스튜디오 모드</button>
+          </div>
+          <button type="button" class="btn-secondary btn-sm" id="studioChangeScoreBtn">악보 변경</button>
+          <button type="button" class="btn-primary btn-sm" id="studioSaveBtn">💾 프로젝트 저장</button>
+        </div>
+      </div>
+
+      <!-- Studio 3-Column Workspace -->
+      <div class="studio-workspace">
+        <!-- Left: Instrument Tracks -->
+        <aside class="studio-left-panel">
+          <div class="panel-header-row">
+            <h3>참여 악기 (<span id="studioTrackCount">0</span>)</h3>
+            <button type="button" class="btn-text-xs studio-only" id="resetSoloMuteBtn">모두 켜기</button>
+          </div>
+          <div class="track-list" id="studioTrackList">
+            <!-- Populated by app.js -->
+          </div>
+        </aside>
+
+        <!-- Center: Sheet Music Viewer -->
+        <main class="studio-center-panel">
+          <div class="score-toolbar">
+            <div class="score-view-options">
+              <label for="scorePartFilterSelect">악보 보기:</label>
+              <select id="scorePartFilterSelect" class="compact-select">
+                <option value="-1">전체 총보 (모든 악기)</option>
+              </select>
+            </div>
+            <div class="score-zoom-controls">
+              <span class="measure-indicator" id="measureIndicator">마디 1 / -</span>
+              <button type="button" class="zoom-btn" id="zoomOutBtn" title="악보 축소">－</button>
+              <span id="zoomLabel">85%</span>
+              <button type="button" class="zoom-btn" id="zoomInBtn" title="악보 확대">＋</button>
+            </div>
+          </div>
+
+          <div class="score-viewport" id="scoreViewport">
+            <div id="osmdContainer" class="osmd-paper">
+              <div class="score-placeholder">
+                <p>악보를 불러오면 이곳에 악보가 표시됩니다.</p>
+                <button type="button" class="btn-primary" id="studioLoadSampleQuickBtn">샘플 악보 바로 열기</button>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <!-- Right: Playback Settings & Ensemble Switcher -->
+        <aside class="studio-right-panel">
+          <div class="right-card">
+            <h3>음량 및 재생 설정</h3>
+
+            <div class="control-block">
+              <div class="control-label-row">
+                <span class="label-simple">전체 음량</span>
+                <span class="val-badge" id="masterVolVal">85%</span>
+              </div>
+              <input type="range" id="masterVolSlider" min="0" max="110" value="85" />
+            </div>
+
+            <div class="control-block">
+              <div class="control-label-row">
+                <span class="label-simple" id="speedLabelText">재생 속도</span>
+                <span class="val-badge" id="speedVal">1.0x (108 BPM)</span>
+              </div>
+              <input type="range" id="speedSlider" min="50" max="150" value="100" step="5" />
+              <div class="quick-rate-btns">
+                <button type="button" class="rate-chip" data-rate="75">느리게 0.75x</button>
+                <button type="button" class="rate-chip active" data-rate="100">기본 1.0x</button>
+                <button type="button" class="rate-chip" data-rate="125">빠르게 1.25x</button>
+              </div>
+            </div>
+
+            <div class="control-block">
+              <div class="control-label-row">
+                <span class="label-simple">공간감 (공연장 울림)</span>
+                <span class="val-badge" id="reverbVal">28%</span>
+              </div>
+              <input type="range" id="reverbSlider" min="0" max="90" value="28" />
+            </div>
+          </div>
+
+          <div class="right-card">
+            <div class="panel-header-row">
+              <h3>악단 스타일 일괄 전환</h3>
+            </div>
+            <p class="right-hint">원클릭으로 현재 악보의 악기 구성을 다른 악단 스타일로 바꿔 들어보세요.</p>
+            <div class="quick-preset-pills" id="studioQuickPresets">
+              <!-- Populated by app.js -->
+            </div>
+            <button type="button" class="btn-outline-full" id="restoreOriginalInstBtn">
+              원본 악보 악기로 되돌리기
+            </button>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Bottom Transport Bar -->
+      <footer class="studio-transport">
+        <div class="transport-buttons">
+          <button type="button" class="tp-btn" id="tpRewindBtn" title="처음부터 다시 재생">⏮ 처음으로</button>
+          <button type="button" class="tp-play-btn" id="tpPlayBtn">▶ 합주 재생</button>
+        </div>
+
+        <div class="transport-timeline">
+          <span class="time-text" id="timeElapsed">00:00</span>
+          <input type="range" id="seekSlider" class="seek-slider" min="0" max="1000" value="0" />
+          <span class="time-text" id="timeDuration">00:00</span>
+        </div>
+
+        <div class="transport-extra">
+          <span class="mode-tag" id="transportModeTag">간단 모드</span>
+        </div>
+      </footer>
+    </section>
+
+    <!-- Toast Notification -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script type="module" src="js/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "name": "my-band",
+  "version": "1.0.0",
+  "description": "MY BAND - 웹 기반 가상 합주단 구성 및 악보 자동 연주 서비스",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "postinstall": "node scripts/copy-vendor.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "jszip": "^3.10.1",
+    "opensheetmusicdisplay": "^1.8.9",
+    "soundfont-player": "^0.12.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
