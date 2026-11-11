@@ -18,12 +18,19 @@ import {
   saveProject,
   deleteProject
 } from './storage.js';
+import {
+  startOneIdLogin,
+  handleOneIdCallback,
+  fetchCurrentOneIdUser,
+  clearOneIdSession
+} from './auth.js';
 
 // ==========================================================================
 // Application State
 // ==========================================================================
 const state = {
   currentScreen: 'home',
+  currentUser: null,
   mode: 'simple', // 'simple' | 'studio'
   selectedEnsemble: {
     type: 'original', // 'original' | 'preset' | 'custom'
@@ -1001,9 +1008,47 @@ function bindEvents() {
   });
 }
 
+function renderAuthArea() {
+  const authArea = document.getElementById('authArea');
+  if (!authArea) return;
+
+  if (state.currentUser) {
+    const label =
+      state.currentUser.nickname ||
+      state.currentUser.name ||
+      state.currentUser.username ||
+      'ONEID 회원';
+    authArea.innerHTML = '';
+
+    const chip = document.createElement('span');
+    chip.className = 'user-chip';
+    chip.textContent = `● ${label}`;
+
+    const logoutBtn = document.createElement('button');
+    logoutBtn.type = 'button';
+    logoutBtn.className = 'util-btn';
+    logoutBtn.textContent = '로그아웃';
+    logoutBtn.addEventListener('click', () => {
+      clearOneIdSession();
+      state.currentUser = null;
+      renderAuthArea();
+      showToast('로그아웃되었습니다.');
+    });
+
+    authArea.appendChild(chip);
+    authArea.appendChild(logoutBtn);
+  } else {
+    authArea.innerHTML = `<button type="button" id="oneidLoginBtn" class="util-btn-login">ONEID 로그인</button>`;
+    authArea.querySelector('#oneidLoginBtn').addEventListener('click', () => {
+      startOneIdLogin();
+    });
+  }
+}
+
 // Initialize App
-function init() {
+async function init() {
   bindEvents();
+  renderAuthArea();
   renderHomeSamples();
   renderHomeRecentProjects();
   renderEnsemblePresets();
@@ -1012,6 +1057,21 @@ function init() {
   renderUploadSamplePills();
   updateSelectedBandHeader();
   setMode('simple');
+
+  // Handle ONEID SSO callback or restore existing session
+  const callbackUser = await handleOneIdCallback((msg) => showToast(msg));
+  if (callbackUser) {
+    state.currentUser = callbackUser;
+    renderAuthArea();
+    showToast(`${callbackUser.nickname || callbackUser.username || 'ONEID'}님 로그인 완료!`);
+    return;
+  }
+
+  const restored = await fetchCurrentOneIdUser();
+  if (restored) {
+    state.currentUser = restored;
+    renderAuthArea();
+  }
 }
 
 init();

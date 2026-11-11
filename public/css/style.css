@@ -173,13 +173,53 @@ body:not(.mode-studio) .studio-only {
 .util-links {
   display: flex;
   gap: 12px;
+  align-items: center;
   padding-left: 12px;
   border-left: 1px solid var(--border);
+}
+
+.auth-area {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.util-btn-login {
+  background: var(--gold-dim);
+  border: 1px solid rgba(212, 162, 89, 0.4);
+  color: var(--gold-bright);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.util-btn-login:hover {
+  background: var(--gold);
+  color: #111216;
+}
+
+.user-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--success);
+  background: rgba(79, 193, 143, 0.12);
+  border: 1px solid rgba(79, 193, 143, 0.35);
+  padding: 4px 10px;
+  border-radius: 14px;
 }
 
 .util-btn {
   font-size: 12px;
   color: var(--text-sub);
+  background: transparent;
+  border: none;
+  cursor: pointer;
   text-decoration: none;
   transition: color 0.2s ease;
 }
