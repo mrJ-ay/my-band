@@ -24,6 +24,7 @@ import {
   fetchCurrentOneIdUser,
   clearOneIdSession
 } from './auth.js';
+import { LiveStageVisualizer } from './stage-visualizer.js';
 
 // ==========================================================================
 // Application State
@@ -47,6 +48,18 @@ const state = {
 
 const audioEngine = new EnsembleAudioEngine();
 const osmdView = new ScoreDisplayView(document.getElementById('osmdContainer'));
+const liveStage = new LiveStageVisualizer(
+  document.getElementById('liveStagePanel'),
+  (trackId) => {
+    if (!state.activeProject) return;
+    const track = state.activeProject.tracks.find((t) => t.id === trackId);
+    if (!track) return;
+    track.solo = !track.solo;
+    audioEngine.syncTrackMixerStates();
+    renderStudioTracks();
+    liveStage.updateFrame(audioEngine.getCurrentBeat(), audioEngine.isPlaying);
+  }
+);
 
 // ==========================================================================
 // Utility & UI Helpers
@@ -468,6 +481,7 @@ async function openScoreInStudio(scoreData, { autoPlay = false, presetOverride =
 
   renderStudioTracks();
   renderStudioQuickPresets();
+  liveStage.renderStage(scoreData);
   updateSoundfontBadge();
 
   try {
@@ -610,6 +624,7 @@ function renderStudioTracks() {
       applyEnsembleSpatialBalance(proj.tracks);
       audioEngine.syncTrackMixerStates();
       renderStudioTracks();
+      liveStage.renderStage(proj);
       await audioEngine.loadInstrumentSoundfont(sel.value);
       updateSoundfontBadge();
     });
@@ -622,6 +637,7 @@ function renderStudioTracks() {
       track.muted = !track.muted;
       audioEngine.syncTrackMixerStates();
       renderStudioTracks();
+      liveStage.updateFrame(audioEngine.getCurrentBeat(), audioEngine.isPlaying);
     });
   });
 
@@ -632,6 +648,7 @@ function renderStudioTracks() {
       track.solo = !track.solo;
       audioEngine.syncTrackMixerStates();
       renderStudioTracks();
+      liveStage.updateFrame(audioEngine.getCurrentBeat(), audioEngine.isPlaying);
     });
   });
 
@@ -673,6 +690,7 @@ function renderStudioTracks() {
       applyEnsembleSpatialBalance(proj.tracks);
       audioEngine.rebuildTrackNodes();
       renderStudioTracks();
+      liveStage.renderStage(proj);
       showToast(`${src.displayName} 파트를 복제해 입체 합주를 구성했습니다.`);
     });
   });
@@ -685,6 +703,7 @@ function renderStudioTracks() {
       applyEnsembleSpatialBalance(proj.tracks);
       audioEngine.rebuildTrackNodes();
       renderStudioTracks();
+      liveStage.renderStage(proj);
     });
   });
 }
@@ -706,9 +725,10 @@ function renderStudioQuickPresets() {
       if (!state.activeProject) return;
       applyEnsembleMappingToTracks(state.activeProject, btn.dataset.presetId);
       audioEngine.syncTrackMixerStates();
-      await audioEngine.preloadScoreInstruments();
+      liveStage.renderStage(state.activeProject);
       renderStudioTracks();
       renderStudioQuickPresets();
+      await audioEngine.preloadScoreInstruments();
       updateSoundfontBadge();
       showToast(`'${state.activeProject.ensembleLabel}' 편성으로 전환했습니다.`);
     });
@@ -777,6 +797,8 @@ audioEngine.onProgress = ({ currentSeconds, totalSeconds, currentBeat, isPlaying
   }
   document.getElementById('measureIndicator').textContent = `마디 ${curMeasure} / ${timeline.length || '-'}`;
 
+  liveStage.updateFrame(currentBeat, isPlaying);
+
   if (isPlaying || currentBeat > 0) {
     osmdView.syncCursorToBeat(currentBeat);
   }
@@ -785,6 +807,7 @@ audioEngine.onProgress = ({ currentSeconds, totalSeconds, currentBeat, isPlaying
 audioEngine.onEnded = () => {
   updatePlayButtonState(false);
   osmdView.resetCursor();
+  liveStage.updateFrame(0, false);
 };
 
 // ==========================================================================
@@ -914,9 +937,17 @@ function bindEvents() {
     });
     audioEngine.syncTrackMixerStates();
     renderStudioTracks();
+    liveStage.updateFrame(audioEngine.getCurrentBeat(), audioEngine.isPlaying);
   });
 
   // Score Toolbar
+  document.getElementById('toggleStageBtn').addEventListener('click', (e) => {
+    const panel = document.getElementById('liveStagePanel');
+    const isCollapsed = panel.classList.toggle('collapsed');
+    e.currentTarget.classList.toggle('active', !isCollapsed);
+    e.currentTarget.textContent = isCollapsed ? '🎭 무대 열기' : '🎭 무대 보기';
+  });
+
   document.getElementById('scorePartFilterSelect').addEventListener('change', (e) => {
     const idx = parseInt(e.target.value, 10);
     osmdView.setVisiblePartIndex(idx);
@@ -969,9 +1000,10 @@ function bindEvents() {
     if (!state.activeProject) return;
     applyEnsembleMappingToTracks(state.activeProject, 'original');
     audioEngine.syncTrackMixerStates();
-    await audioEngine.preloadScoreInstruments();
+    liveStage.renderStage(state.activeProject);
     renderStudioTracks();
     renderStudioQuickPresets();
+    await audioEngine.preloadScoreInstruments();
     updateSoundfontBadge();
     showToast('원본 악보에 지정된 악기로 되돌렸습니다.');
   });
@@ -982,6 +1014,7 @@ function bindEvents() {
     if (audioEngine.isPlaying) {
       audioEngine.pause();
       updatePlayButtonState(false);
+      liveStage.updateFrame(audioEngine.getCurrentBeat(), false);
     } else {
       audioEngine.play();
       updatePlayButtonState(true);
@@ -993,6 +1026,7 @@ function bindEvents() {
     audioEngine.stop();
     osmdView.resetCursor();
     updatePlayButtonState(false);
+    liveStage.updateFrame(0, false);
   });
 
   const seekSlider = document.getElementById('seekSlider');
