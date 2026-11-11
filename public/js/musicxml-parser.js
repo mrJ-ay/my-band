@@ -122,6 +122,13 @@ function ensureScorePartwise(xmlString) {
   throw new Error('지원하지 않는 XML 문서입니다. <score-partwise> 또는 <score-timewise>가 필요합니다.');
 }
 
+function serializeWithXmlHeader(doc) {
+  const xml = new XMLSerializer().serializeToString(doc);
+  return xml.trimStart().startsWith('<?xml')
+    ? xml
+    : `<?xml version="1.0" encoding="UTF-8"?>\n${xml}`;
+}
+
 /**
  * Merge 1 or more MusicXML strings into a single unified score-partwise XML string
  * so both OSMD and the audio scheduler see one cohesive ensemble score.
@@ -133,7 +140,7 @@ export function mergeMusicXMLStrings(entries) {
 
   if (entries.length === 1) {
     const doc = ensureScorePartwise(entries[0].xml);
-    return new XMLSerializer().serializeToString(doc);
+    return serializeWithXmlHeader(doc);
   }
 
   const outDoc = document.implementation.createDocument(null, 'score-partwise', null);
@@ -179,7 +186,7 @@ export function mergeMusicXMLStrings(entries) {
     });
   }
 
-  return new XMLSerializer().serializeToString(outDoc);
+  return serializeWithXmlHeader(outDoc);
 }
 
 function mapUnpitchedToDrumMidi(displayStep, displayOctave, instrumentName = '') {

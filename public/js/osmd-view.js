@@ -163,7 +163,17 @@ export class ScoreDisplayView {
       outRoot.appendChild(partOut);
     }
 
-    return new XMLSerializer().serializeToString(outDoc);
+    const serialized = new XMLSerializer().serializeToString(outDoc);
+    return serialized.trimStart().startsWith('<?xml')
+      ? serialized
+      : `<?xml version="1.0" encoding="UTF-8"?>\n${serialized}`;
+  }
+
+  _serializeFullXml() {
+    const serialized = new XMLSerializer().serializeToString(this.sourceDoc);
+    return serialized.trimStart().startsWith('<?xml')
+      ? serialized
+      : `<?xml version="1.0" encoding="UTF-8"?>\n${serialized}`;
   }
 
   async renderCurrentView() {
@@ -178,7 +188,15 @@ export class ScoreDisplayView {
 
       const xmlToRender = this.pagingEnabled
         ? this._buildSlicedXml(startIdx, endIdx)
-        : new XMLSerializer().serializeToString(this.sourceDoc);
+        : this._serializeFullXml();
+
+      // Auto-fit zoom cleanly to viewport width unless user manually set zoom
+      if (!this.userZoomed && this.containerEl) {
+        const w = this.containerEl.clientWidth || 700;
+        this.zoom = Number(Math.min(0.85, Math.max(0.52, (w - 36) / 960)).toFixed(2));
+        const zoomLbl = document.getElementById('zoomLabel');
+        if (zoomLbl) zoomLbl.textContent = `${Math.round(this.zoom * 100)}%`;
+      }
 
       this.containerEl.innerHTML = '';
       const { OpenSheetMusicDisplay } = window.opensheetmusicdisplay;
@@ -190,7 +208,7 @@ export class ScoreDisplayView {
         drawSubtitle: false,
         drawComposer: false,
         drawPartNames: true,
-        followCursor: !this.pagingEnabled, // avoid aggressive scroll jumps on paged view
+        followCursor: false,
         cursorsOptions: [
           {
             type: 0,
@@ -252,7 +270,8 @@ export class ScoreDisplayView {
   }
 
   setZoom(newZoom) {
-    this.zoom = Math.max(0.5, Math.min(1.4, newZoom));
+    this.userZoomed = true;
+    this.zoom = Math.max(0.45, Math.min(1.4, newZoom));
     if (!this.osmd || !this.isLoaded) return;
     this.osmd.Zoom = this.zoom;
     this.osmd.render();
