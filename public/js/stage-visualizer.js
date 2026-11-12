@@ -120,7 +120,7 @@ export const STAGE_THEMES = {
   },
   gugak: {
     id: 'gugak',
-    label: '전통 국악 한옥 누각',
+    label: '전통 국악 한옥 누각 · 음원: 국립국악원(공공누리 1유형)',
     en: 'KOREAN TRADITIONAL PAVILION',
     accent: '#46c8a8',
     accentSoft: 'rgba(70, 200, 168, 0.36)',

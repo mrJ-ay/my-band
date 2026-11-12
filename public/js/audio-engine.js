@@ -6,6 +6,21 @@ const SOUNDFONT_BASES = [
   'https://cdn.jsdelivr.net/gh/gleitz/midi-js-soundfonts@gh-pages/MusyngKite/'
 ];
 
+// Official National Gugak Center (국립국악원, 공공누리 제1유형) local audio samples
+const GUGAK_SAMPLE_CONFIG = {
+  gayageum: { url: 'gugak-samples/gayageum.wav', baseMidi: 46.9, isPlucked: true },
+  geomungo: { url: 'gugak-samples/geomungo.wav', baseMidi: 38.67, isPlucked: true },
+  haegeum: { url: 'gugak-samples/haegeum.wav', baseMidi: 55.87, isPlucked: false },
+  daegeum: { url: 'gugak-samples/daegeum.wav', baseMidi: 63.14, isPlucked: false },
+  piri: { url: 'gugak-samples/piri.wav', baseMidi: 56.95, isPlucked: false },
+  janggu: {
+    isPercussion: true,
+    kungUrl: 'gugak-samples/janggu_kung.mp3',
+    deokUrl: 'gugak-samples/janggu_deok.mp3',
+    deongUrl: 'gugak-samples/janggu_deong.mp3'
+  }
+};
+
 function midiToFreq(midi) {
   return 440 * Math.pow(2, (midi - 69) / 12);
 }
@@ -20,6 +35,7 @@ export class EnsembleAudioEngine {
     this.compressor = null;
 
     this.soundfontCache = new Map(); // sfName -> { status: 'loading'|'ready'|'failed', player }
+    this.gugakCache = new Map(); // instrumentKey -> { status: 'loading'|'ready'|'failed', buffer|buffers }
     this.loadingCallbacks = new Set();
 
     this.scoreData = null; // { tracks, tempoMap, totalBeats }
@@ -180,7 +196,57 @@ export class EnsembleAudioEngine {
     await Promise.all(keys.map((key) => this.loadInstrumentSoundfont(key)));
   }
 
+  async _loadAudioBuffer(url) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const arr = await res.arrayBuffer();
+    return await this.ctx.decodeAudioData(arr);
+  }
+
+  async _loadGugakInstrument(instrumentKey) {
+    const cfg = GUGAK_SAMPLE_CONFIG[instrumentKey];
+    if (!cfg) return null;
+
+    if (this.gugakCache.has(instrumentKey)) {
+      const cached = this.gugakCache.get(instrumentKey);
+      if (cached.status !== 'loading') return cached;
+      return await cached.promise;
+    }
+
+    this.ensureContext();
+    const entry = { status: 'loading', cfg, buffer: null, buffers: null, promise: null };
+    const loadPromise = (async () => {
+      try {
+        if (cfg.isPercussion) {
+          const [kung, deok, deong] = await Promise.all([
+            this._loadAudioBuffer(cfg.kungUrl),
+            this._loadAudioBuffer(cfg.deokUrl),
+            this._loadAudioBuffer(cfg.deongUrl)
+          ]);
+          entry.buffers = { kung, deok, deong };
+        } else {
+          entry.buffer = await this._loadAudioBuffer(cfg.url);
+        }
+        entry.status = 'ready';
+      } catch (err) {
+        console.warn('국악기 음원 로드 실패, 기본 폴백 사용:', instrumentKey, err);
+        entry.status = 'failed';
+      }
+      this._notifyTrackLoad();
+      return entry;
+    })();
+
+    entry.promise = loadPromise;
+    this.gugakCache.set(instrumentKey, entry);
+    this._notifyTrackLoad();
+    return await loadPromise;
+  }
+
   async loadInstrumentSoundfont(instrumentKey) {
+    if (GUGAK_SAMPLE_CONFIG[instrumentKey]) {
+      return await this._loadGugakInstrument(instrumentKey);
+    }
+
     const inst = INSTRUMENTS[instrumentKey] || INSTRUMENTS.acoustic_grand_piano;
     const sfName = inst.sfName;
 
@@ -230,6 +296,10 @@ export class EnsembleAudioEngine {
   }
 
   getInstrumentStatus(instrumentKey) {
+    if (GUGAK_SAMPLE_CONFIG[instrumentKey]) {
+      const cached = this.gugakCache.get(instrumentKey);
+      return cached ? cached.status : 'idle';
+    }
     const inst = INSTRUMENTS[instrumentKey] || INSTRUMENTS.acoustic_grand_piano;
     const cached = this.soundfontCache.get(inst.sfName);
     return cached ? cached.status : 'idle';
@@ -446,6 +516,31 @@ export class EnsembleAudioEngine {
 
   _triggerVoice(track, nodeInfo, note, audioTime, durationSec) {
     const inst = INSTRUMENTS[track.instrumentKey] || INSTRUMENTS.acoustic_grand_piano;
+
+    // 1. Official National Gugak Center sample playback
+    if (GUGAK_SAMPLE_CONFIG[track.instrumentKey]) {
+      const gEntry = this.gugakCache.get(track.instrumentKey);
+      if (gEntry && gEntry.status === 'ready') {
+        if (gEntry.cfg.isPercussion && gEntry.buffers) {
+          const stopFn = this._playJangguBuffer(gEntry, note.midi, audioTime, nodeInfo.gainNode);
+          nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + 0.9 });
+          return;
+        }
+        if (gEntry.buffer) {
+          const stopFn = this._playGugakNote(
+            gEntry,
+            note.midi,
+            audioTime,
+            durationSec,
+            nodeInfo.gainNode,
+            track.detuneCents || 0
+          );
+          nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + durationSec + 0.45 });
+          return;
+        }
+      }
+    }
+
     const cached = this.soundfontCache.get(inst.sfName);
 
     if (inst.isPercussion || note.isPercussion) {
@@ -481,6 +576,61 @@ export class EnsembleAudioEngine {
       );
       nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + durationSec + 0.35 });
     }
+  }
+
+  _playGugakNote(entry, midi, startTime, durationSec, destination, detuneCents = 0) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = entry.buffer;
+
+    const semitones = midi - entry.cfg.baseMidi + detuneCents / 100;
+    const rate = Math.max(0.25, Math.min(4.0, Math.pow(2, semitones / 12)));
+    src.playbackRate.setValueAtTime(rate, startTime);
+
+    const env = ctx.createGain();
+    const isPlucked = Boolean(entry.cfg.isPlucked);
+    const playDur = isPlucked ? Math.min(1.45, durationSec + 0.35) : Math.min(1.4, durationSec);
+    const release = isPlucked ? 0.22 : 0.14;
+    const endTime = startTime + Math.max(0.08, playDur);
+
+    env.gain.setValueAtTime(0.0001, startTime);
+    env.gain.linearRampToValueAtTime(0.88, startTime + 0.015);
+    env.gain.setValueAtTime(isPlucked ? 0.65 : 0.8, endTime);
+    env.gain.exponentialRampToValueAtTime(0.0001, endTime + release);
+
+    src.connect(env);
+    env.connect(destination);
+    src.start(startTime);
+    src.stop(endTime + release + 0.02);
+
+    return () => {
+      try {
+        src.stop();
+      } catch (_) {}
+    };
+  }
+
+  _playJangguBuffer(entry, midi, startTime, destination) {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    if (midi === 35 || midi === 36) {
+      src.buffer = entry.buffers.kung;
+    } else if (midi === 38) {
+      src.buffer = entry.buffers.deok;
+    } else {
+      src.buffer = entry.buffers.deong;
+    }
+
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.95, startTime);
+    src.connect(gain);
+    gain.connect(destination);
+    src.start(startTime);
+    return () => {
+      try {
+        src.stop();
+      } catch (_) {}
+    };
   }
 
   /**
@@ -676,6 +826,21 @@ export class EnsembleAudioEngine {
       ? [48, 52, 55]
       : [60, 64, 67, 72];
 
+    if (GUGAK_SAMPLE_CONFIG[instrumentKey] && entry && entry.status === 'ready') {
+      if (entry.cfg.isPercussion && entry.buffers) {
+        this._playJangguBuffer(entry, 36, now, this.masterInput);
+        this._playJangguBuffer(entry, 38, now + 0.18, this.masterInput);
+        this._playJangguBuffer(entry, 42, now + 0.36, this.masterInput);
+        return;
+      }
+      if (entry.buffer) {
+        notes.forEach((midi, idx) => {
+          this._playGugakNote(entry, midi, now + idx * 0.14, 0.35, this.masterInput);
+        });
+        return;
+      }
+    }
+
     if (INSTRUMENTS[instrumentKey]?.isPercussion) {
       const isJanggu = instrumentKey === 'janggu';
       this._playDrumSynth(36, now, this.masterInput, isJanggu);
@@ -686,7 +851,7 @@ export class EnsembleAudioEngine {
 
     notes.forEach((midi, idx) => {
       const t = now + idx * 0.12;
-      if (entry.status === 'ready' && entry.player) {
+      if (entry && entry.status === 'ready' && entry.player) {
         entry.player.play(midi, t, { duration: 0.45, gain: 0.7, destination: this.masterInput });
       } else {
         this._playFallbackSynth(
