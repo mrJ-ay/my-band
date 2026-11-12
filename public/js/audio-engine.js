@@ -449,7 +449,12 @@ export class EnsembleAudioEngine {
     const cached = this.soundfontCache.get(inst.sfName);
 
     if (inst.isPercussion || note.isPercussion) {
-      const stopFn = this._playDrumSynth(note.midi, audioTime, nodeInfo.gainNode);
+      const stopFn = this._playDrumSynth(
+        note.midi,
+        audioTime,
+        nodeInfo.gainNode,
+        track.instrumentKey === 'janggu'
+      );
       nodeInfo.activeStops.add({ stopFn, endAudioTime: audioTime + 0.35 });
       return;
     }
@@ -582,8 +587,45 @@ export class EnsembleAudioEngine {
     };
   }
 
-  _playDrumSynth(midi, startTime, destination) {
+  _playDrumSynth(midi, startTime, destination, isJanggu = false) {
     const ctx = this.ctx;
+    if (isJanggu) {
+      // Janggu: low Gungpyeon (35/36) vs crisp Chaepyeon bamboo strike (38/42/etc)
+      if (midi === 35 || midi === 36) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(118, startTime);
+        osc.frequency.exponentialRampToValueAtTime(64, startTime + 0.18);
+        gain.gain.setValueAtTime(0.62, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.32);
+        osc.connect(gain);
+        gain.connect(destination);
+        osc.start(startTime);
+        osc.stop(startTime + 0.34);
+        return () => { try { osc.stop(); } catch (_) {} };
+      }
+      // Chaepyeon bamboo slap
+      const len = Math.floor(ctx.sampleRate * 0.11);
+      const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 3100;
+      filter.Q.value = 2.4;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.45, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.1);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(destination);
+      noise.start(startTime);
+      return () => { try { noise.stop(); } catch (_) {} };
+    }
+
     if (midi === 35 || midi === 36) {
       // Kick drum
       const osc = ctx.createOscillator();
@@ -635,9 +677,10 @@ export class EnsembleAudioEngine {
       : [60, 64, 67, 72];
 
     if (INSTRUMENTS[instrumentKey]?.isPercussion) {
-      this._playDrumSynth(36, now, this.masterInput);
-      this._playDrumSynth(42, now + 0.12, this.masterInput);
-      this._playDrumSynth(38, now + 0.24, this.masterInput);
+      const isJanggu = instrumentKey === 'janggu';
+      this._playDrumSynth(36, now, this.masterInput, isJanggu);
+      this._playDrumSynth(42, now + 0.12, this.masterInput, isJanggu);
+      this._playDrumSynth(38, now + 0.24, this.masterInput, isJanggu);
       return;
     }
 

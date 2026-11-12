@@ -344,6 +344,75 @@ export const INSTRUMENTS = {
     isPercussion: true,
     minMidi: 35,
     maxMidi: 81
+  },
+
+  // Korean Traditional (국악기)
+  gayageum: {
+    key: 'gayageum',
+    ko: '가야금',
+    en: 'Gayageum',
+    category: '국악기',
+    program: 108,
+    sfName: 'koto',
+    synthType: 'guitar',
+    minMidi: 48,
+    maxMidi: 88
+  },
+  geomungo: {
+    key: 'geomungo',
+    ko: '거문고',
+    en: 'Geomungo',
+    category: '국악기',
+    program: 107,
+    sfName: 'shamisen',
+    synthType: 'bass',
+    minMidi: 36,
+    maxMidi: 68
+  },
+  haegeum: {
+    key: 'haegeum',
+    ko: '해금',
+    en: 'Haegeum',
+    category: '국악기',
+    program: 111,
+    sfName: 'fiddle',
+    synthType: 'strings',
+    minMidi: 55,
+    maxMidi: 88
+  },
+  daegeum: {
+    key: 'daegeum',
+    ko: '대금',
+    en: 'Daegeum',
+    category: '국악기',
+    program: 78,
+    sfName: 'shakuhachi',
+    synthType: 'woodwind',
+    minMidi: 55,
+    maxMidi: 91
+  },
+  piri: {
+    key: 'piri',
+    ko: '피리 · 태평소',
+    en: 'Piri / Taepyeongso',
+    category: '국악기',
+    program: 112,
+    sfName: 'shanai',
+    synthType: 'woodwind',
+    minMidi: 53,
+    maxMidi: 84
+  },
+  janggu: {
+    key: 'janggu',
+    ko: '장구 · 북',
+    en: 'Janggu & Buk',
+    category: '국악기',
+    program: 117,
+    sfName: 'taiko_drum',
+    synthType: 'percussion',
+    isPercussion: true,
+    minMidi: 35,
+    maxMidi: 81
   }
 };
 
@@ -507,6 +576,26 @@ export const ENSEMBLE_PRESETS = [
       keyboard: 'brass_section',
       percussion: 'percussion_kit'
     }
+  },
+  {
+    id: 'gugak',
+    ko: '국악 밴드',
+    en: 'Korean Traditional (Gugak)',
+    tag: '전통 · 퓨전 국악',
+    icon: '🏮',
+    color: '#46c8a8',
+    reverb: 0.34,
+    desc: '가야금·거문고·해금·대금·피리·장구가 어우러져 한국 전통의 멋과 여운을 울리는 국악 합주단입니다.',
+    lineup: ['daegeum', 'gayageum', 'haegeum', 'geomungo', 'piri', 'janggu'],
+    roleMap: {
+      melodyHigh: 'gayageum',
+      melodyWind: 'daegeum',
+      harmonyMid: 'haegeum',
+      harmonyLow: 'piri',
+      bass: 'geomungo',
+      keyboard: 'gayageum',
+      percussion: 'janggu'
+    }
   }
 ];
 
@@ -548,10 +637,22 @@ const MIDI_PROGRAM_TO_KEY = {
   72: 'clarinet',
   73: 'piccolo',
   74: 'flute',
-  90: 'pad_2_warm'
+  78: 'daegeum',
+  90: 'pad_2_warm',
+  107: 'geomungo',
+  108: 'gayageum',
+  111: 'haegeum',
+  112: 'piri',
+  117: 'janggu'
 };
 
 const KEYWORD_RULES = [
+  { regex: /gayageum|가야금/i, key: 'gayageum' },
+  { regex: /geomungo|거문고/i, key: 'geomungo' },
+  { regex: /haegeum|아쟁|해금/i, key: 'haegeum' },
+  { regex: /daegeum|소금|대금/i, key: 'daegeum' },
+  { regex: /piri|taepyeongso|피리|태평소/i, key: 'piri' },
+  { regex: /janggu|buk|kkwaenggwari|장구|장고|북|꽹과리/i, key: 'janggu' },
   { regex: /drum|perc|snare|cymbal|kick|타악|드럼/i, key: 'percussion_kit' },
   { regex: /timpani|팀파니/i, key: 'timpani' },
   { regex: /piccolo|피콜로/i, key: 'piccolo' },
@@ -583,12 +684,12 @@ const KEYWORD_RULES = [
 ];
 
 export function matchInstrumentFromNameOrProgram(name = '', midiProgram = null, isUnpitched = false) {
+  for (const rule of KEYWORD_RULES) {
+    if (rule.regex.test(name)) return rule.key;
+  }
   if (isUnpitched) return 'percussion_kit';
   if (midiProgram && MIDI_PROGRAM_TO_KEY[midiProgram]) {
     return MIDI_PROGRAM_TO_KEY[midiProgram];
-  }
-  for (const rule of KEYWORD_RULES) {
-    if (rule.regex.test(name)) return rule.key;
   }
   if (midiProgram >= 1 && midiProgram <= 8) return 'acoustic_grand_piano';
   if (midiProgram >= 25 && midiProgram <= 32) return 'electric_guitar_clean';

@@ -117,12 +117,71 @@ export const STAGE_THEMES = {
         <rect x="90" y="18" width="24" height="175" rx="3"/><rect x="886" y="18" width="24" height="175" rx="3"/>
         <path d="M90,26 Q500,80 910,26" fill="none" stroke-width="2"/>
       </g>`
+  },
+  gugak: {
+    id: 'gugak',
+    label: '전통 국악 한옥 누각',
+    en: 'KOREAN TRADITIONAL PAVILION',
+    accent: '#46c8a8',
+    accentSoft: 'rgba(70, 200, 168, 0.36)',
+    bgCss: 'radial-gradient(ellipse at 50% 0%, rgba(70, 200, 168, 0.22), transparent 58%), radial-gradient(ellipse at 50% 95%, rgba(218, 128, 72, 0.16), #0b1111 75%)',
+    floorColor: '#1a1a18',
+    backdropSvg: `
+      <path d="M40,42 Q260,8 500,14 Q740,8 960,42" fill="none" stroke="rgba(70,200,168,0.28)" stroke-width="3"/>
+      <path d="M95,48 L95,185 M905,48 L905,185" stroke="rgba(218,128,72,0.25)" stroke-width="6"/>
+      <g stroke="rgba(70,200,168,0.12)" stroke-width="1" fill="none">
+        <rect x="190" y="54" width="620" height="82" rx="4"/>
+        <line x1="345" y1="54" x2="345" y2="136"/><line x1="500" y1="54" x2="500" y2="136"/><line x1="655" y1="54" x2="655" y2="136"/>
+      </g>
+      <circle cx="155" cy="70" r="10" fill="rgba(240,180,90,0.16)" stroke="rgba(240,180,90,0.3)" stroke-width="1.5"/>
+      <circle cx="845" cy="70" r="10" fill="rgba(240,180,90,0.16)" stroke="rgba(240,180,90,0.3)" stroke-width="1.5"/>`
   }
 };
 
 // Detailed, recognizable SVG artwork per instrument type
 function getInstrumentGlyphSvg(instrumentKey) {
   const inst = INSTRUMENTS[instrumentKey] || INSTRUMENTS.acoustic_grand_piano;
+
+  if (instrumentKey === 'janggu') {
+    return `
+      <svg viewBox="0 0 64 64" class="inst-svg">
+        <path d="M14,22 L28,30 L36,30 L50,22 L50,44 L36,36 L28,36 L14,44 Z" fill="currentColor" opacity="0.38" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>
+        <ellipse cx="14" cy="33" rx="4" ry="11" fill="currentColor" opacity="0.55" stroke="currentColor" stroke-width="2"/>
+        <ellipse cx="50" cy="33" rx="4" ry="11" fill="currentColor" opacity="0.55" stroke="currentColor" stroke-width="2"/>
+        <line x1="20" y1="14" x2="31" y2="26" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        <line x1="46" y1="12" x2="38" y2="26" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>`;
+  }
+
+  if (instrumentKey === 'gayageum' || instrumentKey === 'geomungo') {
+    return `
+      <svg viewBox="0 0 64 64" class="inst-svg">
+        <rect x="8" y="25" width="48" height="15" rx="3" fill="currentColor" opacity="0.35" stroke="currentColor" stroke-width="2.2"/>
+        <line x1="12" y1="29" x2="52" y2="29" stroke="currentColor" stroke-width="1.2"/>
+        <line x1="12" y1="33" x2="52" y2="33" stroke="currentColor" stroke-width="1.2"/>
+        <line x1="12" y1="37" x2="52" y2="37" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="24" cy="33" r="1.6" fill="currentColor"/><circle cx="32" cy="30" r="1.6" fill="currentColor"/><circle cx="40" cy="36" r="1.6" fill="currentColor"/>
+      </svg>`;
+  }
+
+  if (instrumentKey === 'haegeum') {
+    return `
+      <svg viewBox="0 0 64 64" class="inst-svg">
+        <line x1="32" y1="10" x2="32" y2="46" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        <rect x="24" y="42" width="16" height="12" rx="3" fill="currentColor" opacity="0.45" stroke="currentColor" stroke-width="2.2"/>
+        <line x1="15" y1="35" x2="49" y2="35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="32" cy="10" r="3" fill="currentColor"/>
+      </svg>`;
+  }
+
+  if (instrumentKey === 'daegeum' || instrumentKey === 'piri') {
+    return `
+      <svg viewBox="0 0 64 64" class="inst-svg">
+        <line x1="8" y1="38" x2="56" y2="22" stroke="currentColor" stroke-width="4.5" stroke-linecap="round"/>
+        <circle cx="23" cy="33" r="2" fill="#0d0e13"/><circle cx="31" cy="30" r="2" fill="#0d0e13"/>
+        <circle cx="39" cy="27" r="2" fill="#0d0e13"/><circle cx="47" cy="25" r="2" fill="#0d0e13"/>
+      </svg>`;
+  }
 
   if (instrumentKey === 'percussion_kit' || instrumentKey === 'timpani') {
     if (instrumentKey === 'timpani') {
@@ -283,6 +342,9 @@ export function resolveStageThemeId(project) {
 
   // Infer visual stage from actual instrument composition
   const keys = (project.tracks || []).map((t) => t.instrumentKey);
+  if (keys.some((k) => ['gayageum', 'geomungo', 'haegeum', 'daegeum', 'piri', 'janggu'].includes(k))) {
+    return 'gugak';
+  }
   if (keys.some((k) => k === 'distortion_guitar' || k === 'electric_guitar_clean')) return 'rock';
   if (keys.some((k) => k === 'alto_sax' || k === 'tenor_sax')) return 'jazz';
   if (keys.some((k) => k === 'tuba') && !keys.some((k) => k === 'violin')) return 'brass';

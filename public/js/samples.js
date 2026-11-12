@@ -406,6 +406,101 @@ const CHAMBER_XML = buildScoreXml({
   ]
 });
 
+// 5. Arirang Gugak Ensemble (대금, 해금, 가야금, 거문고, 장구 - 3/4 세마치장단)
+const ARIRANG_XML = buildScoreXml({
+  title: '아리랑 국악 합주 (Arirang Gugak)',
+  tempo: 92,
+  beats: 3,
+  beatType: 4,
+  parts: [
+    {
+      id: 'P1',
+      name: '대금 (Daegeum)',
+      midiProgram: 78,
+      clef: { sign: 'G', line: 2 },
+      measures: [
+        seq([['C5', H, 'half'], ['D5', Q, 'quarter']]),
+        seq([['E5', H, 'half'], ['G5', Q, 'quarter']]),
+        seq([['A5', Q, 'quarter'], ['G5', Q, 'quarter'], ['E5', Q, 'quarter']]),
+        seq([['D5', H, 'half'], ['E5', Q, 'quarter']]),
+        seq([['C5', H, 'half'], ['D5', Q, 'quarter']]),
+        seq([['E5', Q, 'quarter'], ['D5', Q, 'quarter'], ['C5', Q, 'quarter']]),
+        seq([['A4', H, 'half'], ['G4', Q, 'quarter']]),
+        seq([['C5', H, 'half'], ['R', Q, 'quarter']])
+      ]
+    },
+    {
+      id: 'P2',
+      name: '해금 (Haegeum)',
+      midiProgram: 111,
+      clef: { sign: 'G', line: 2 },
+      measures: [
+        seq([['G4', H, 'half'], ['A4', Q, 'quarter']]),
+        seq([['C5', H, 'half'], ['E5', Q, 'quarter']]),
+        seq([['E5', Q, 'quarter'], ['D5', Q, 'quarter'], ['C5', Q, 'quarter']]),
+        seq([['A4', H, 'half'], ['G4', Q, 'quarter']]),
+        seq([['G4', H, 'half'], ['A4', Q, 'quarter']]),
+        seq([['C5', Q, 'quarter'], ['A4', Q, 'quarter'], ['G4', Q, 'quarter']]),
+        seq([['E4', H, 'half'], ['D4', Q, 'quarter']]),
+        seq([['E4', H, 'half'], ['R', Q, 'quarter']])
+      ]
+    },
+    {
+      id: 'P3',
+      name: '가야금 (Gayageum)',
+      midiProgram: 108,
+      clef: { sign: 'G', line: 2 },
+      measures: [
+        seq([['C4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['G4', E, 'eighth'], ['E5', E, 'eighth'], ['G4', E, 'eighth']]),
+        seq([['C4', E, 'eighth'], ['E4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['E5', E, 'eighth'], ['G5', E, 'eighth']]),
+        seq([['A4', E, 'eighth'], ['C5', E, 'eighth'], ['E5', E, 'eighth'], ['C5', E, 'eighth'], ['A4', E, 'eighth'], ['E4', E, 'eighth']]),
+        seq([['D4', E, 'eighth'], ['A4', E, 'eighth'], ['D5', E, 'eighth'], ['G4', E, 'eighth'], ['D5', E, 'eighth'], ['G5', E, 'eighth']]),
+        seq([['C4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['G4', E, 'eighth'], ['D5', E, 'eighth'], ['G4', E, 'eighth']]),
+        seq([['E4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['D5', E, 'eighth'], ['C5', E, 'eighth'], ['G4', E, 'eighth']]),
+        seq([['A3', E, 'eighth'], ['E4', E, 'eighth'], ['A4', E, 'eighth'], ['G3', E, 'eighth'], ['D4', E, 'eighth'], ['G4', E, 'eighth']]),
+        seq([['C4', Q, 'quarter'], ['G4', Q, 'quarter'], ['C5', Q, 'quarter']])
+      ]
+    },
+    {
+      id: 'P4',
+      name: '거문고 (Geomungo)',
+      midiProgram: 107,
+      clef: { sign: 'F', line: 4 },
+      measures: [
+        seq([['C3', H, 'half'], ['G2', Q, 'quarter']]),
+        seq([['C3', H, 'half'], ['E3', Q, 'quarter']]),
+        seq([['A2', H, 'half'], ['E3', Q, 'quarter']]),
+        seq([['G2', H, 'half'], ['D3', Q, 'quarter']]),
+        seq([['C3', H, 'half'], ['G2', Q, 'quarter']]),
+        seq([['C3', H, 'half'], ['G2', Q, 'quarter']]),
+        seq([['A2', Q, 'quarter'], ['E2', Q, 'quarter'], ['G2', Q, 'quarter']]),
+        seq([['C3', H, 'half'], ['R', Q, 'quarter']])
+      ]
+    },
+    {
+      id: 'P5',
+      name: '장구 (Janggu)',
+      midiProgram: 117,
+      unpitched: true,
+      clef: { sign: 'percussion', line: 2 },
+      measures: Array.from({ length: 8 }, (_, idx) => {
+        if (idx === 7) {
+          return seq([
+            ['R', H, 'half', { unpitched: { step: 'F', octave: 4 } }],
+            ['R', Q, 'quarter', { unpitched: { step: 'C', octave: 5 } }]
+          ]);
+        }
+        return seq([
+          ['R', Q, 'quarter', { unpitched: { step: 'F', octave: 4 } }],
+          ['R', E, 'eighth', { unpitched: { step: 'C', octave: 5 } }],
+          ['R', E, 'eighth', { unpitched: { step: 'C', octave: 5 } }],
+          ['R', Q, 'quarter', { unpitched: { step: 'F', octave: 4 } }]
+        ]);
+      })
+    }
+  ]
+});
+
 export const SAMPLE_SCORES = [
   {
     id: 'symphony_twinkle',
@@ -414,6 +509,14 @@ export const SAMPLE_SCORES = [
     ensembleId: 'symphony',
     tag: '오케스트라',
     xml: SYMPHONY_XML
+  },
+  {
+    id: 'arirang_gugak',
+    title: '아리랑 국악 합주',
+    subtitle: '대금 · 해금 · 가야금 · 거문고 · 장구 (5파트)',
+    ensembleId: 'gugak',
+    tag: '국악 밴드',
+    xml: ARIRANG_XML
   },
   {
     id: 'brass_fanfare',
