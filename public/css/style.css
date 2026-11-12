@@ -1316,10 +1316,15 @@ body:not(.mode-studio) .studio-only {
   color: var(--danger);
 }
 
-.trk-btn.active-solo {
+.trk-btn.active-solo,
+.trk-btn.active-swap {
   background: var(--gold-dim);
   border-color: var(--gold);
   color: var(--gold-bright);
+}
+
+.track-swap-box {
+  padding-top: 6px;
 }
 
 .track-studio-controls {

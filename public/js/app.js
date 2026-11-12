@@ -569,8 +569,15 @@ function renderStudioTracks() {
   const listEl = document.getElementById('studioTrackList');
   document.getElementById('studioTrackCount').textContent = proj.tracks.length;
 
-  const instOptions = Object.values(INSTRUMENTS)
-    .map((inst) => `<option value="${inst.key}">${inst.ko} (${inst.category})</option>`)
+  const categories = Array.from(new Set(Object.values(INSTRUMENTS).map((i) => i.category)));
+  const instOptions = categories
+    .map((cat) => {
+      const opts = Object.values(INSTRUMENTS)
+        .filter((i) => i.category === cat)
+        .map((inst) => `<option value="${inst.key}">${inst.ko}</option>`)
+        .join('');
+      return `<optgroup label="${cat}">${opts}</optgroup>`;
+    })
     .join('');
 
   listEl.innerHTML = proj.tracks
@@ -580,6 +587,7 @@ function renderStudioTracks() {
       const instName = INSTRUMENTS[t.instrumentKey]?.ko || t.displayName;
       const muteLabel = state.mode === 'simple' ? '이 악기 끄기' : 'Mute';
       const soloLabel = state.mode === 'simple' ? '이 악기만 듣기' : 'Solo';
+      const isSwapOpen = state.mode === 'studio' || Boolean(t._swapOpen);
 
       return `
       <div class="track-card ${t.muted ? 'muted' : ''} ${t.solo ? 'soloed' : ''}" data-track-id="${t.id}">
@@ -598,12 +606,18 @@ function renderStudioTracks() {
           <button type="button" class="trk-btn trk-solo-btn ${t.solo ? 'active-solo' : ''}" data-id="${t.id}">
             ${soloLabel}
           </button>
+          <button type="button" class="trk-btn trk-swap-btn ${t._swapOpen ? 'active-swap' : ''}" data-id="${t.id}" title="이 파트의 악기 변경">
+            🔄 악기 변경
+          </button>
         </div>
 
-        <div class="track-studio-controls studio-only">
+        <div class="track-swap-box ${isSwapOpen ? '' : 'hidden'}">
           <select class="track-select trk-inst-select" data-id="${t.id}" aria-label="악기 음색 변경">
             ${instOptions}
           </select>
+        </div>
+
+        <div class="track-studio-controls studio-only">
           <div class="slider-mini-row">
             <span>음량</span>
             <input type="range" class="trk-vol-slider" data-id="${t.id}" min="0" max="120" value="${Math.round(t.volume * 100)}" />
@@ -623,6 +637,16 @@ function renderStudioTracks() {
     })
     .join('');
 
+  // Toggle inline instrument picker
+  listEl.querySelectorAll('.trk-swap-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const track = proj.tracks.find((x) => x.id === btn.dataset.id);
+      if (!track) return;
+      track._swapOpen = !track._swapOpen;
+      renderStudioTracks();
+    });
+  });
+
   // Sync select values & bind events
   listEl.querySelectorAll('.trk-inst-select').forEach((sel) => {
     const t = proj.tracks.find((x) => x.id === sel.dataset.id);
@@ -632,6 +656,7 @@ function renderStudioTracks() {
       if (!track) return;
       track.instrumentKey = sel.value;
       track.displayName = INSTRUMENTS[sel.value]?.ko || track.partName;
+      track._swapOpen = false;
       applyEnsembleSpatialBalance(proj.tracks);
       audioEngine.syncTrackMixerStates();
       renderStudioTracks();
