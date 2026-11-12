@@ -8,12 +8,12 @@ const SOUNDFONT_BASES = [
 
 // Official National Gugak Center (국립국악원, 공공누리 제1유형) local audio samples
 const GUGAK_SAMPLE_CONFIG = {
-  gayageum: { url: 'gugak-samples/gayageum.wav', baseMidi: 46.9, isPlucked: true },
+  gayageum: { url: 'gugak-samples/gayageum.wav', baseMidi: 62.22, isPlucked: true },
   geomungo: { url: 'gugak-samples/geomungo.wav', baseMidi: 38.67, isPlucked: true },
-  haegeum: { url: 'gugak-samples/haegeum.wav', baseMidi: 55.87, isPlucked: false },
-  daegeum: { url: 'gugak-samples/daegeum.wav', baseMidi: 63.14, isPlucked: false },
-  piri: { url: 'gugak-samples/piri.wav', baseMidi: 56.95, isPlucked: false },
-  pyeongyeong: { url: 'gugak-samples/pyeongyeong.wav', baseMidi: 56.03, isPlucked: true },
+  haegeum: { url: 'gugak-samples/haegeum.wav', baseMidi: 55.85, isPlucked: false },
+  daegeum: { url: 'gugak-samples/daegeum.wav', baseMidi: 63.18, isPlucked: false },
+  piri: { url: 'gugak-samples/piri.wav', baseMidi: 56.92, isPlucked: false },
+  pyeongyeong: { url: 'gugak-samples/pyeongyeong.wav', baseMidi: 72.25, isPlucked: true },
   janggu: {
     isPercussion: true,
     kungUrl: 'gugak-samples/janggu_kung.mp3',
