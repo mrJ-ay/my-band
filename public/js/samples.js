@@ -1,18 +1,19 @@
 // Programmatic generator for clean, valid, multi-part MusicXML sample scores
 
-function noteXml(pitchStr, durTicks, typeStr, { chord = false, tieStart = false, tieStop = false, unpitched = null } = {}) {
+function noteXml(pitchStr, durTicks, typeStr, { chord = false, tieStart = false, tieStop = false, dot = false, unpitched = null } = {}) {
   const chordTag = chord ? '<chord/>' : '';
   const tieTags = `${tieStop ? '<tie type="stop"/>' : ''}${tieStart ? '<tie type="start"/>' : ''}`;
+  const dotTag = dot ? '<dot/>' : '';
   const notations = (tieStop || tieStart)
     ? `<notations>${tieStop ? '<tied type="stop"/>' : ''}${tieStart ? '<tied type="start"/>' : ''}</notations>`
     : '';
 
   if (unpitched) {
-    return `<note>${chordTag}<unpitched><display-step>${unpitched.step}</display-step><display-octave>${unpitched.octave}</display-octave></unpitched><duration>${durTicks}</duration>${tieTags}<type>${typeStr}</type>${notations}</note>`;
+    return `<note>${chordTag}<unpitched><display-step>${unpitched.step}</display-step><display-octave>${unpitched.octave}</display-octave></unpitched><duration>${durTicks}</duration>${tieTags}<type>${typeStr}</type>${dotTag}${notations}</note>`;
   }
 
   if (pitchStr === 'R') {
-    return `<note><rest/><duration>${durTicks}</duration><type>${typeStr}</type></note>`;
+    return `<note><rest/><duration>${durTicks}</duration><type>${typeStr}</type>${dotTag}</note>`;
   }
 
   // pitchStr like "C4", "F#5", "Bb3"
@@ -21,11 +22,10 @@ function noteXml(pitchStr, durTicks, typeStr, { chord = false, tieStart = false,
   const alter = m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0;
   const octave = m[3];
 
-  return `<note>${chordTag}<pitch><step>${step}</step>${alter !== 0 ? `<alter>${alter}</alter>` : ''}<octave>${octave}</octave></pitch><duration>${durTicks}</duration>${tieTags}<type>${typeStr}</type>${notations}</note>`;
+  return `<note>${chordTag}<pitch><step>${step}</step>${alter !== 0 ? `<alter>${alter}</alter>` : ''}<octave>${octave}</octave></pitch><duration>${durTicks}</duration>${tieTags}<type>${typeStr}</type>${dotTag}${notations}</note>`;
 }
 
-function buildScoreXml({ title, tempo = 108, beats = 4, beatType = 4, parts }) {
-  const divisions = 2; // 1 quarter = 2, 1 eighth = 1, 1 half = 4, 1 whole = 8
+function buildScoreXml({ title, tempo = 108, beats = 4, beatType = 4, divisions = 2, parts }) {
 
   const partListXml = parts
     .map(
@@ -406,12 +406,19 @@ const CHAMBER_XML = buildScoreXml({
   ]
 });
 
-// 5. Arirang Gugak Ensemble (대금, 해금, 가야금, 거문고, 장구 - 3/4 세마치장단)
+// 5. Real Bonjo Arirang (본조 아리랑 - 16마디, 3/4 세마치장단, divisions=4 -> 12 ticks/bar)
+const HD = 12; // dotted half
+const QD = 6;  // dotted quarter
+const H4 = 8;  // half
+const Q4 = 4;  // quarter
+const E4 = 2;  // eighth
+
 const ARIRANG_XML = buildScoreXml({
-  title: '아리랑 국악 합주 (Arirang Gugak)',
+  title: '아리랑 국악 합주 (본조 아리랑)',
   tempo: 92,
   beats: 3,
   beatType: 4,
+  divisions: 4,
   parts: [
     {
       id: 'P1',
@@ -419,14 +426,22 @@ const ARIRANG_XML = buildScoreXml({
       midiProgram: 78,
       clef: { sign: 'G', line: 2 },
       measures: [
-        seq([['C5', H, 'half'], ['D5', Q, 'quarter']]),
-        seq([['E5', H, 'half'], ['G5', Q, 'quarter']]),
-        seq([['A5', Q, 'quarter'], ['G5', Q, 'quarter'], ['E5', Q, 'quarter']]),
-        seq([['D5', H, 'half'], ['E5', Q, 'quarter']]),
-        seq([['C5', H, 'half'], ['D5', Q, 'quarter']]),
-        seq([['E5', Q, 'quarter'], ['D5', Q, 'quarter'], ['C5', Q, 'quarter']]),
-        seq([['A4', H, 'half'], ['G4', Q, 'quarter']]),
-        seq([['C5', H, 'half'], ['R', Q, 'quarter']])
+        seq([['G4', QD, 'quarter', { dot: true }], ['A4', E4, 'eighth'], ['C5', Q4, 'quarter']]),
+        seq([['D5', QD, 'quarter', { dot: true }], ['E5', E4, 'eighth'], ['C5', Q4, 'quarter']]),
+        seq([['A4', E4, 'eighth'], ['C5', E4, 'eighth'], ['D5', Q4, 'quarter'], ['E5', E4, 'eighth'], ['D5', E4, 'eighth']]),
+        seq([['C5', HD, 'half', { dot: true }]]),
+        seq([['G5', QD, 'quarter', { dot: true }], ['G5', E4, 'eighth'], ['E5', Q4, 'quarter']]),
+        seq([['D5', QD, 'quarter', { dot: true }], ['C5', E4, 'eighth'], ['A4', Q4, 'quarter']]),
+        seq([['C5', QD, 'quarter', { dot: true }], ['D5', E4, 'eighth'], ['E5', E4, 'eighth'], ['D5', E4, 'eighth']]),
+        seq([['C5', HD, 'half', { dot: true }]]),
+        seq([['G5', Q4, 'quarter'], ['E5', E4, 'eighth'], ['G5', E4, 'eighth'], ['E5', E4, 'eighth'], ['D5', E4, 'eighth']]),
+        seq([['C5', QD, 'quarter', { dot: true }], ['D5', E4, 'eighth'], ['C5', Q4, 'quarter']]),
+        seq([['A4', E4, 'eighth'], ['C5', E4, 'eighth'], ['D5', Q4, 'quarter'], ['E5', E4, 'eighth'], ['D5', E4, 'eighth']]),
+        seq([['C5', HD, 'half', { dot: true }]]),
+        seq([['G4', QD, 'quarter', { dot: true }], ['A4', E4, 'eighth'], ['C5', Q4, 'quarter']]),
+        seq([['D5', QD, 'quarter', { dot: true }], ['E5', E4, 'eighth'], ['C5', Q4, 'quarter']]),
+        seq([['A4', E4, 'eighth'], ['C5', E4, 'eighth'], ['D5', Q4, 'quarter'], ['E5', E4, 'eighth'], ['D5', E4, 'eighth']]),
+        seq([['C5', HD, 'half', { dot: true }]])
       ]
     },
     {
@@ -435,14 +450,22 @@ const ARIRANG_XML = buildScoreXml({
       midiProgram: 111,
       clef: { sign: 'G', line: 2 },
       measures: [
-        seq([['G4', H, 'half'], ['A4', Q, 'quarter']]),
-        seq([['C5', H, 'half'], ['E5', Q, 'quarter']]),
-        seq([['E5', Q, 'quarter'], ['D5', Q, 'quarter'], ['C5', Q, 'quarter']]),
-        seq([['A4', H, 'half'], ['G4', Q, 'quarter']]),
-        seq([['G4', H, 'half'], ['A4', Q, 'quarter']]),
-        seq([['C5', Q, 'quarter'], ['A4', Q, 'quarter'], ['G4', Q, 'quarter']]),
-        seq([['E4', H, 'half'], ['D4', Q, 'quarter']]),
-        seq([['E4', H, 'half'], ['R', Q, 'quarter']])
+        seq([['C4', H4, 'half'], ['E4', Q4, 'quarter']]),
+        seq([['G4', H4, 'half'], ['E4', Q4, 'quarter']]),
+        seq([['A4', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['E4', HD, 'half', { dot: true }]]),
+        seq([['C5', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['A4', H4, 'half'], ['E4', Q4, 'quarter']]),
+        seq([['G4', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['E4', HD, 'half', { dot: true }]]),
+        seq([['C5', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['E4', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['A4', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['E4', HD, 'half', { dot: true }]]),
+        seq([['C4', H4, 'half'], ['E4', Q4, 'quarter']]),
+        seq([['G4', H4, 'half'], ['E4', Q4, 'quarter']]),
+        seq([['A4', H4, 'half'], ['G4', Q4, 'quarter']]),
+        seq([['E4', HD, 'half', { dot: true }]])
       ]
     },
     {
@@ -451,14 +474,22 @@ const ARIRANG_XML = buildScoreXml({
       midiProgram: 108,
       clef: { sign: 'G', line: 2 },
       measures: [
-        seq([['C4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['G4', E, 'eighth'], ['E5', E, 'eighth'], ['G4', E, 'eighth']]),
-        seq([['C4', E, 'eighth'], ['E4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['E5', E, 'eighth'], ['G5', E, 'eighth']]),
-        seq([['A4', E, 'eighth'], ['C5', E, 'eighth'], ['E5', E, 'eighth'], ['C5', E, 'eighth'], ['A4', E, 'eighth'], ['E4', E, 'eighth']]),
-        seq([['D4', E, 'eighth'], ['A4', E, 'eighth'], ['D5', E, 'eighth'], ['G4', E, 'eighth'], ['D5', E, 'eighth'], ['G5', E, 'eighth']]),
-        seq([['C4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['G4', E, 'eighth'], ['D5', E, 'eighth'], ['G4', E, 'eighth']]),
-        seq([['E4', E, 'eighth'], ['G4', E, 'eighth'], ['C5', E, 'eighth'], ['D5', E, 'eighth'], ['C5', E, 'eighth'], ['G4', E, 'eighth']]),
-        seq([['A3', E, 'eighth'], ['E4', E, 'eighth'], ['A4', E, 'eighth'], ['G3', E, 'eighth'], ['D4', E, 'eighth'], ['G4', E, 'eighth']]),
-        seq([['C4', Q, 'quarter'], ['G4', Q, 'quarter'], ['C5', Q, 'quarter']])
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth'], ['E5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['G4', E4, 'eighth'], ['D5', E4, 'eighth'], ['G5', E4, 'eighth'], ['D5', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['A3', E4, 'eighth'], ['E4', E4, 'eighth'], ['A4', E4, 'eighth'], ['G4', E4, 'eighth'], ['D4', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['E5', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['E5', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['A3', E4, 'eighth'], ['E4', E4, 'eighth'], ['A4', E4, 'eighth'], ['E4', E4, 'eighth'], ['A4', E4, 'eighth'], ['C5', E4, 'eighth']]),
+        seq([['G3', E4, 'eighth'], ['D4', E4, 'eighth'], ['G4', E4, 'eighth'], ['D5', E4, 'eighth'], ['G4', E4, 'eighth'], ['D4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth'], ['E4', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['E5', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth'], ['E4', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['A3', E4, 'eighth'], ['E4', E4, 'eighth'], ['A4', E4, 'eighth'], ['G4', E4, 'eighth'], ['D4', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['E5', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', E4, 'eighth'], ['G4', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth'], ['E5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['G4', E4, 'eighth'], ['D5', E4, 'eighth'], ['G5', E4, 'eighth'], ['D5', E4, 'eighth'], ['C5', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['A3', E4, 'eighth'], ['E4', E4, 'eighth'], ['A4', E4, 'eighth'], ['G4', E4, 'eighth'], ['D4', E4, 'eighth'], ['G4', E4, 'eighth']]),
+        seq([['C4', HD, 'half', { dot: true }]])
       ]
     },
     {
@@ -467,14 +498,22 @@ const ARIRANG_XML = buildScoreXml({
       midiProgram: 107,
       clef: { sign: 'F', line: 4 },
       measures: [
-        seq([['C3', H, 'half'], ['G2', Q, 'quarter']]),
-        seq([['C3', H, 'half'], ['E3', Q, 'quarter']]),
-        seq([['A2', H, 'half'], ['E3', Q, 'quarter']]),
-        seq([['G2', H, 'half'], ['D3', Q, 'quarter']]),
-        seq([['C3', H, 'half'], ['G2', Q, 'quarter']]),
-        seq([['C3', H, 'half'], ['G2', Q, 'quarter']]),
-        seq([['A2', Q, 'quarter'], ['E2', Q, 'quarter'], ['G2', Q, 'quarter']]),
-        seq([['C3', H, 'half'], ['R', Q, 'quarter']])
+        seq([['C3', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['G2', H4, 'half'], ['C3', Q4, 'quarter']]),
+        seq([['A2', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['C3', HD, 'half', { dot: true }]]),
+        seq([['C3', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['A2', H4, 'half'], ['E2', Q4, 'quarter']]),
+        seq([['G2', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['C3', HD, 'half', { dot: true }]]),
+        seq([['C3', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['C3', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['A2', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['C3', HD, 'half', { dot: true }]]),
+        seq([['C3', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['G2', H4, 'half'], ['C3', Q4, 'quarter']]),
+        seq([['A2', H4, 'half'], ['G2', Q4, 'quarter']]),
+        seq([['C3', HD, 'half', { dot: true }]])
       ]
     },
     {
@@ -483,18 +522,15 @@ const ARIRANG_XML = buildScoreXml({
       midiProgram: 117,
       unpitched: true,
       clef: { sign: 'percussion', line: 2 },
-      measures: Array.from({ length: 8 }, (_, idx) => {
-        if (idx === 7) {
-          return seq([
-            ['R', H, 'half', { unpitched: { step: 'F', octave: 4 } }],
-            ['R', Q, 'quarter', { unpitched: { step: 'C', octave: 5 } }]
-          ]);
+      measures: Array.from({ length: 16 }, (_, idx) => {
+        if (idx === 15) {
+          return seq([['R', HD, 'half', { dot: true, unpitched: { step: 'F', octave: 4 } }]]);
         }
         return seq([
-          ['R', Q, 'quarter', { unpitched: { step: 'F', octave: 4 } }],
-          ['R', E, 'eighth', { unpitched: { step: 'C', octave: 5 } }],
-          ['R', E, 'eighth', { unpitched: { step: 'C', octave: 5 } }],
-          ['R', Q, 'quarter', { unpitched: { step: 'F', octave: 4 } }]
+          ['R', Q4, 'quarter', { unpitched: { step: 'F', octave: 4 } }],
+          ['R', Q4, 'quarter', { unpitched: { step: 'C', octave: 5 } }],
+          ['R', E4, 'eighth', { unpitched: { step: 'F', octave: 4 } }],
+          ['R', E4, 'eighth', { unpitched: { step: 'C', octave: 5 } }]
         ]);
       })
     }
