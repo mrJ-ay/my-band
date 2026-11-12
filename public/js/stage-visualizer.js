@@ -174,6 +174,17 @@ function getInstrumentGlyphSvg(instrumentKey) {
       </svg>`;
   }
 
+  if (instrumentKey === 'pyeongyeong') {
+    return `
+      <svg viewBox="0 0 64 64" class="inst-svg">
+        <path d="M12,16 L52,16 M15,16 L15,52 M49,16 L49,52" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M21,22 L21,34 L26,34 L26,26 Z" fill="currentColor" opacity="0.65" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M30,22 L30,36 L35,36 L35,27 Z" fill="currentColor" opacity="0.65" stroke="currentColor" stroke-width="1.4"/>
+        <path d="M39,22 L39,33 L44,33 L44,25 Z" fill="currentColor" opacity="0.65" stroke="currentColor" stroke-width="1.4"/>
+        <line x1="10" y1="52" x2="54" y2="52" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>`;
+  }
+
   if (instrumentKey === 'daegeum' || instrumentKey === 'piri') {
     return `
       <svg viewBox="0 0 64 64" class="inst-svg">
@@ -342,7 +353,7 @@ export function resolveStageThemeId(project) {
 
   // Infer visual stage from actual instrument composition
   const keys = (project.tracks || []).map((t) => t.instrumentKey);
-  if (keys.some((k) => ['gayageum', 'geomungo', 'haegeum', 'daegeum', 'piri', 'janggu'].includes(k))) {
+  if (keys.some((k) => ['gayageum', 'geomungo', 'haegeum', 'daegeum', 'piri', 'pyeongyeong', 'janggu'].includes(k))) {
     return 'gugak';
   }
   if (keys.some((k) => k === 'distortion_guitar' || k === 'electric_guitar_clean')) return 'rock';

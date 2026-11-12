@@ -13,6 +13,7 @@ const GUGAK_SAMPLE_CONFIG = {
   haegeum: { url: 'gugak-samples/haegeum.wav', baseMidi: 55.87, isPlucked: false },
   daegeum: { url: 'gugak-samples/daegeum.wav', baseMidi: 63.14, isPlucked: false },
   piri: { url: 'gugak-samples/piri.wav', baseMidi: 56.95, isPlucked: false },
+  pyeongyeong: { url: 'gugak-samples/pyeongyeong.wav', baseMidi: 56.03, isPlucked: true },
   janggu: {
     isPercussion: true,
     kungUrl: 'gugak-samples/janggu_kung.mp3',

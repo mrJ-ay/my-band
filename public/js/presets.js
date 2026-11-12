@@ -413,6 +413,17 @@ export const INSTRUMENTS = {
     isPercussion: true,
     minMidi: 35,
     maxMidi: 81
+  },
+  pyeongyeong: {
+    key: 'pyeongyeong',
+    ko: '편경',
+    en: 'Pyeongyeong (Stone Chimes)',
+    category: '국악기',
+    program: 15,
+    sfName: 'tubular_bells',
+    synthType: 'keyboard',
+    minMidi: 48,
+    maxMidi: 96
   }
 };
 
@@ -585,15 +596,15 @@ export const ENSEMBLE_PRESETS = [
     icon: '🏮',
     color: '#46c8a8',
     reverb: 0.34,
-    desc: '가야금·거문고·해금·대금·피리·장구가 어우러져 한국 전통의 멋과 여운을 울리는 국악 합주단입니다.',
-    lineup: ['daegeum', 'gayageum', 'haegeum', 'geomungo', 'piri', 'janggu'],
+    desc: '가야금·거문고·해금·대금·피리·편경·장구가 어우러져 한국 전통의 멋과 여운을 울리는 국악 합주단입니다.',
+    lineup: ['daegeum', 'gayageum', 'haegeum', 'geomungo', 'piri', 'pyeongyeong', 'janggu'],
     roleMap: {
       melodyHigh: 'gayageum',
       melodyWind: 'daegeum',
       harmonyMid: 'haegeum',
       harmonyLow: 'piri',
       bass: 'geomungo',
-      keyboard: 'gayageum',
+      keyboard: 'pyeongyeong',
       percussion: 'janggu'
     }
   }
@@ -647,6 +658,7 @@ const MIDI_PROGRAM_TO_KEY = {
 };
 
 const KEYWORD_RULES = [
+  { regex: /pyeongyeong|편경/i, key: 'pyeongyeong' },
   { regex: /gayageum|가야금/i, key: 'gayageum' },
   { regex: /geomungo|거문고/i, key: 'geomungo' },
   { regex: /haegeum|아쟁|해금/i, key: 'haegeum' },
