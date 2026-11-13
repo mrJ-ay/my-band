@@ -13,6 +13,6 @@ services:
       - key: PORT
         value: "5600"
       - key: ONEID_URL
-        value: "https://oneid-icvq.onrender.com"
+        value: "https://oneid-ruddy.vercel.app"
       - key: HELPDESK_URL
         value: "https://oneid-helpdesk.onrender.com/?service=MY%20BAND"

@@ -35,7 +35,7 @@ app.get('/api/health', (req, res) => {
 app.get('/api/config', (req, res) => {
   res.json({
     serviceName: 'MY BAND',
-    oneidUrl: process.env.ONEID_URL || 'https://oneid-icvq.onrender.com',
+    oneidUrl: process.env.ONEID_URL || 'https://oneid-ruddy.vercel.app',
     helpdeskUrl:
       process.env.HELPDESK_URL ||
       'https://oneid-helpdesk.onrender.com/?service=MY%20BAND'

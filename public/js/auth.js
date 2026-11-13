@@ -2,7 +2,7 @@ const TOKEN_KEY = 'myband_oneid_token_v1';
 const VERIFIER_KEY = 'myband_oneid_verifier';
 const STATE_KEY = 'myband_oneid_state';
 
-const DEFAULT_ONEID_URL = 'https://oneid-icvq.onrender.com';
+const DEFAULT_ONEID_URL = 'https://oneid-ruddy.vercel.app';
 const CLIENT_ID = 'myband';
 
 function base64UrlEncode(bytes) {
